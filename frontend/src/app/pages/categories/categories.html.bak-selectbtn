@@ -1,0 +1,84 @@
+﻿<div class="categories-page">
+  <div class="page-header">
+    <h1>{{ 'categories.title' | translate }}</h1>
+    <div class="header-actions no-print">
+      <button class="btn-secondary" (click)="printPage()">🖨️ {{ 'common.print' | translate }}</button>
+      @if (canManage) {
+        <button class="btn-primary" (click)="openCreateForm()"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:5px;"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>{{ 'categories.newCategory' | translate }}</button>
+      }
+    </div>
+  </div>
+
+  @if (canManage && selectedIds.size > 0) {
+  <div class="bulk-actions no-print" style="display:flex; align-items:center; gap:12px; padding:10px 16px; background:#eaf1fa; border:1px solid #cfe0f3; border-radius:8px; margin:0 0 12px 0;">
+    <span>{{ selectedIds.size }} selectionne(s)</span>
+    <button class="btn-delete" (click)="deleteSelected()">Supprimer la selection</button>
+    <button class="btn-secondary" (click)="clearSelection()">Annuler la selection</button>
+  </div>
+  }
+
+  <div class="search-bar no-print">
+    <input type="text" [(ngModel)]="searchTerm" [placeholder]="'categories.searchPlaceholder' | translate">
+    @if (searchTerm) {
+      <button class="btn-clear" (click)="clearSearch()">✕ {{ 'common.clear' | translate }}</button>
+    }
+  </div>
+
+  @if (loading) {
+    <p>{{ 'common.loading' | translate }}</p>
+  }
+
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  @if (showForm) {
+    <div class="form-overlay no-print">
+      <div class="form-card">
+        <h2>{{ editingCategory ? ('categories.formTitleEdit' | translate) : ('categories.formTitleNew' | translate) }}</h2>
+        <label>{{ 'products.name' | translate }}</label>
+        <input type="text" [(ngModel)]="newCategoryName" [placeholder]="'categories.namePlaceholder' | translate">
+        <div class="form-actions">
+          <button class="btn-secondary" (click)="cancelForm()">{{ 'common.cancel' | translate }}</button>
+          <button class="btn-primary" (click)="saveCategory()">{{ editingCategory ? ('common.update' | translate) : ('common.save' | translate) }}</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (!loading && !error) {
+    @if (filteredCategories.length === 0) {
+      <p>{{ 'categories.notFound' | translate }}{{ searchTerm ? ' ' + ('common.forSearch' | translate) + ' "' + searchTerm + '"' : '' }}.</p>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            @if (canManage) { <th style="width:36px; text-align:center;"><input type="checkbox" [checked]="allSelected" (change)="toggleSelectAll()"></th> }
+            <th>{{ 'categories.colNumber' | translate }}</th>
+            <th>{{ 'categories.colName' | translate }}</th>
+            <th>{{ 'categories.colProductCount' | translate }}</th>
+            @if (canManage) {
+              <th>{{ 'common.actions' | translate }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (category of filteredCategories; track category.id; let i = $index) {
+            <tr>
+              @if (canManage) { <td style="text-align:center;"><input type="checkbox" [checked]="isSelected(category)" (change)="toggleSelect(category)"></td> }
+              <td>{{ i + 1 }}</td>
+              <td>{{ category.name }}</td>
+              <td>{{ category.products?.length || 0 }}</td>
+              @if (canManage) {
+                <td class="actions">
+                  <button class="btn-edit" (click)="openEditForm(category)">✏️ {{ 'common.edit' | translate }}</button>
+                  <button class="btn-delete" (click)="deleteCategory(category)">🗑️ {{ 'common.delete' | translate }}</button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+</div>

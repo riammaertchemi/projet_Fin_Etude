@@ -1,0 +1,317 @@
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { ProductService } from '../../services/product';
+import { CategoryService } from '../../services/category';
+import { SupplierService } from '../../services/supplier';
+import { Auth } from '../../services/auth';
+
+@Component({
+  selector: 'app-home',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterLink],
+  templateUrl: './home.html',
+  styleUrl: './home.css'
+})
+export class Home implements OnInit {
+  productCount = 0;
+  categoryCount = 0;
+  supplierCount = 0;
+  lowStockCount = 0;
+  loading = true;
+
+  searchProducts = '';
+  searchCategories = '';
+  searchSuppliers = '';
+  searchAlerts = '';
+
+  constructor(
+    private productService: ProductService,
+    private categoryService: CategoryService,
+    private supplierService: SupplierService,
+    private cdr: ChangeDetectorRef,
+    private router: Router,
+    public auth: Auth
+  ) {}
+
+  get today(): string {
+    const formatted = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  }
+
+  ngOnInit(): void {
+    let loaded = 0;
+    const checkDone = () => {
+      loaded++;
+      if (loaded === 4) {
+        this.loading = false;
+        this.cdr.detectChanges();
+      }
+    };
+
+    this.productService.getAll().subscribe({
+      next: (data) => { this.productCount = data.length; checkDone(); },
+      error: () => checkDone()
+    });
+
+    this.categoryService.getAll().subscribe({
+      next: (data) => { this.categoryCount = data.length; checkDone(); },
+      error: () => checkDone()
+    });
+
+    this.supplierService.getAll().subscribe({
+      next: (data) => { this.supplierCount = data.length; checkDone(); },
+      error: () => checkDone()
+    });
+
+    this.productService.getLowStock().subscribe({
+      next: (data) => { this.lowStockCount = data.length; checkDone(); },
+      error: () => checkDone()
+    });
+  }
+
+  goToSearch(path: string, term: string): void {
+    const value = (term || '').trim();
+    if (value) {
+      this.router.navigate([path], { queryParams: { search: value } });
+    } else {
+      this.router.navigate([path]);
+    }
+  }
+}
+
+
+===== HTML =====
+
+<div class="home-container">
+  <div class="dashboard-header">
+    
+    <h1>Tableau de bord</h1>
+    <p class="dashboard-date">{{ today }}</p>
+  </div>
+
+  @if (loading) {
+    <p>Chargement...</p>
+  } @else {
+    <div class="stats-grid">
+      <div class="stat-card products">
+        <a routerLink="/products" class="stat-card-link">
+          <div class="stat-icon">??</div>
+          <div class="stat-value">{{ productCount }}</div>
+          <div class="stat-label">Produits</div>
+        </a>
+        <div class="stat-search">
+          <input
+            type="text"
+            placeholder="Rechercher un produit..."
+            [(ngModel)]="searchProducts"
+            (keyup.enter)="goToSearch('/products', searchProducts)">
+          <button (click)="goToSearch('/products', searchProducts)">??</button>
+        </div>
+      </div>
+
+      <div class="stat-card categories">
+        <a routerLink="/categories" class="stat-card-link">
+          <div class="stat-icon">???</div>
+          <div class="stat-value">{{ categoryCount }}</div>
+          <div class="stat-label">Catégories</div>
+        </a>
+        <div class="stat-search">
+          <input
+            type="text"
+            placeholder="Rechercher une catégorie..."
+            [(ngModel)]="searchCategories"
+            (keyup.enter)="goToSearch('/categories', searchCategories)">
+          <button (click)="goToSearch('/categories', searchCategories)">??</button>
+        </div>
+      </div>
+
+      <div class="stat-card suppliers">
+        <a routerLink="/suppliers" class="stat-card-link">
+          <div class="stat-icon">??</div>
+          <div class="stat-value">{{ supplierCount }}</div>
+          <div class="stat-label">Fournisseurs</div>
+        </a>
+        <div class="stat-search">
+          <input
+            type="text"
+            placeholder="Rechercher un fournisseur..."
+            [(ngModel)]="searchSuppliers"
+            (keyup.enter)="goToSearch('/suppliers', searchSuppliers)">
+          <button (click)="goToSearch('/suppliers', searchSuppliers)">??</button>
+        </div>
+      </div>
+
+      <div class="stat-card alerts">
+        <a routerLink="/alerts" class="stat-card-link">
+          <div class="stat-icon">??</div>
+          <div class="stat-value">{{ lowStockCount }}</div>
+          <div class="stat-label">Alertes stock faible</div>
+        </a>
+        <div class="stat-search">
+          <input
+            type="text"
+            placeholder="Rechercher..."
+            [(ngModel)]="searchAlerts"
+            (keyup.enter)="goToSearch('/alerts', searchAlerts)">
+          <button (click)="goToSearch('/alerts', searchAlerts)">??</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+
+===== CSS =====
+
+.home-container {
+  padding: 24px;
+}
+
+.home-container h1 {
+  font-size: 24px;
+  color: #1e293b;
+  margin: 0 0 24px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 22px;
+}
+
+.stat-card {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.16);
+}
+
+.stat-card.products {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.stat-card.categories {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.stat-card.suppliers {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.stat-card.alerts {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.stat-card-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  text-decoration: none;
+  color: white;
+  padding: 30px 20px 24px;
+}
+
+.stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  font-size: 28px;
+  margin-bottom: 14px;
+}
+
+.stat-value {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.stat-label {
+  font-size: 14.5px;
+  font-weight: 500;
+  opacity: 0.95;
+}
+
+.stat-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  background: rgba(0,0,0,0.15);
+}
+
+.stat-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  outline: none;
+}
+
+.stat-search button {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.9);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.stat-search button:hover {
+  background: white;
+}
+
+:host-context(body.dark-theme) .home-container h1 {
+  color: #f1f5f9;
+}
+
+.dashboard-header {
+  margin-bottom: 28px;
+}
+
+.dashboard-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0 0 6px;
+}
+
+.dashboard-header h1 {
+  font-size: 26px;
+  color: #1e293b;
+  margin: 0 0 4px;
+}
+
+.dashboard-date {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+:host-context(body.dark-theme) .dashboard-header h1 {
+  color: #f1f5f9;
+}
+
+:host-context(body.dark-theme) .dashboard-date {
+  color: #64748b;
+}
+

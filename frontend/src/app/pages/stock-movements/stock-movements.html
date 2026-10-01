@@ -1,0 +1,115 @@
+﻿<div class="stock-movements-page">
+  <div class="page-header">
+    <h1>{{ 'movements.title' | translate }}</h1>
+    <div class="header-actions no-print">
+      <button class="btn-primary" (click)="printPage()">🖨️ {{ 'common.print' | translate }}</button>
+      @if (canManage) {
+        <button class="btn-primary" (click)="openCreateForm()"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:5px;"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>{{ 'movements.newMovement' | translate }}</button>
+        <button class="btn-primary" (click)="toggleSelectionMode()">{{ selectionMode ? 'Annuler la selection' : 'Selectionner' }}</button>
+      }
+    </div>
+  </div>
+
+  @if (canManage && selectionMode && selectedIds.size > 0) {
+  <div class="bulk-actions no-print" style="display:flex; align-items:center; gap:12px; padding:10px 16px; background:#eaf1fa; border:1px solid #cfe0f3; border-radius:8px; margin:0 0 12px 0;">
+    <span>{{ selectedIds.size }} selectionne(s)</span>
+    <button class="btn-delete" (click)="deleteSelected()">Supprimer la selection</button>
+    <button class="btn-secondary" (click)="clearSelection()">Annuler la selection</button>
+  </div>
+  }
+
+  <div class="search-bar no-print">
+    <input type="text" [(ngModel)]="searchTerm" [placeholder]="'movements.searchPlaceholder' | translate">
+    @if (searchTerm) {
+      <button class="btn-clear" (click)="clearSearch()">✕ {{ 'common.clear' | translate }}</button>
+    }
+  </div>
+
+  @if (loading) {
+    <p>{{ 'common.loading' | translate }}</p>
+  }
+
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  @if (showForm) {
+    <div class="form-overlay no-print">
+      <div class="form-card">
+        <h2>{{ editingMovement ? ('movements.formTitleEdit' | translate) : ('movements.formTitleNew' | translate) }}</h2>
+
+        @if (saveError) {
+          <p class="error">{{ saveError }}</p>
+        }
+
+        <label>{{ 'movements.dateLabel' | translate }}</label>
+        <input type="datetime-local" [(ngModel)]="formData.date">
+
+        <label>{{ 'movements.productLabel' | translate }}</label>
+        <select [(ngModel)]="formData.productId">
+          <option [ngValue]="null">{{ 'movements.productNone' | translate }}</option>
+          @for (product of products; track product.id) {
+            <option [ngValue]="product.id">{{ product.name }}</option>
+          }
+        </select>
+
+        <label>{{ 'movements.typeLabel' | translate }}</label>
+        <select [(ngModel)]="formData.type">
+          <option value="ENTREE">{{ 'movements.typeEntree' | translate }}</option>
+          <option value="SORTIE">{{ 'movements.typeSortie' | translate }}</option>
+        </select>
+
+        <label>{{ 'movements.quantityLabel' | translate }}</label>
+        <input type="number" [(ngModel)]="formData.quantity" min="1">
+
+        <label>{{ 'movements.reasonLabel' | translate }}</label>
+        <input type="text" [(ngModel)]="formData.reason" [placeholder]="'movements.reasonPlaceholder' | translate">
+
+        <div class="form-actions">
+          <button class="btn-secondary" (click)="cancelForm()">{{ 'common.cancel' | translate }}</button>
+          <button class="btn-primary" (click)="saveMovement()">{{ 'common.save' | translate }}</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (!loading && !error) {
+    @if (filteredMovements.length === 0) {
+      <p>{{ 'movements.notFound' | translate }}{{ searchTerm ? ' ' + ('common.forSearch' | translate) + ' "' + searchTerm + '"' : '' }}.</p>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            @if (canManage && selectionMode) { <th style="width:36px; text-align:center;"><input type="checkbox" [checked]="allSelected" (change)="toggleSelectAll()"></th> }
+            <th>{{ 'movements.colDate' | translate }}</th>
+            <th>{{ 'movements.colProduct' | translate }}</th>
+            <th>{{ 'movements.colType' | translate }}</th>
+            <th>{{ 'movements.colQuantity' | translate }}</th>
+            <th>{{ 'movements.colReason' | translate }}</th>
+            @if (canManage) {
+              <th>{{ 'common.actions' | translate }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (movement of filteredMovements; track movement.id) {
+            <tr>
+              @if (canManage && selectionMode) { <td style="text-align:center;"><input type="checkbox" [checked]="isSelected(movement)" (change)="toggleSelect(movement)"></td> }
+              <td>{{ movement.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>{{ movement.product?.name || '-' }}</td>
+              <td>{{ movement.type === 'ENTREE' ? ('movements.typeEntree' | translate) : ('movements.typeSortie' | translate) }}</td>
+              <td>{{ movement.quantity }}</td>
+              <td>{{ movement.reason || '-' }}</td>
+              @if (canManage) {
+                <td class="actions">
+                  <button class="btn-edit" (click)="openEditForm(movement)" title="{{ 'common.edit' | translate }}">✏️</button>
+                  <button class="btn-delete" (click)="deleteMovement(movement)" title="{{ 'common.delete' | translate }}">🗑️</button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+</div>

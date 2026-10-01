@@ -1,0 +1,154 @@
+﻿import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { Supplier, SupplierService } from '../../services/supplier';
+import { ConfirmDialogService } from '../../services/confirm-dialog';
+import { Auth } from '../../services/auth';
+import { LangService } from '../../services/lang';
+import { TranslatePipe } from '../../pipes/translate';
+
+@Component({
+  selector: 'app-suppliers',
+  standalone: true,
+  imports: [CommonModule, FormsModule, TranslatePipe],
+  templateUrl: './suppliers.html',
+  styleUrl: './suppliers.css'
+})
+export class Suppliers implements OnInit {
+  suppliers: Supplier[] = [];
+  loading = true;
+  error = '';
+
+  searchTerm = '';
+
+  showForm = false;
+  editingSupplier: Supplier | null = null;
+  formData: Partial<Supplier> = this.emptyForm();
+
+  constructor(
+    private supplierService: SupplierService,
+    private confirmDialog: ConfirmDialogService,
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute,
+    public auth: Auth,
+    public lang: LangService
+  ) {}
+
+  get canManage(): boolean {
+    const role = this.auth.currentUser()?.role;
+    return role === 'ADMIN' || role === 'DIRECTEUR_GENERAL' || role === 'RESPONSABLE_LOGISTIQUE';
+  }
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      this.searchTerm = params['search'] || '';
+      this.cdr.detectChanges();
+    });
+    this.load();
+  }
+
+  get filteredSuppliers(): Supplier[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) return this.suppliers;
+    return this.suppliers.filter(s =>
+      s.name?.toLowerCase().includes(term) ||
+      s.email?.toLowerCase().includes(term) ||
+      s.phone?.toLowerCase().includes(term)
+    );
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+  }
+
+  printPage(): void {
+    window.print();
+  }
+
+  load(): void {
+    this.loading = true;
+    this.supplierService.getAll().subscribe({
+      next: (data) => {
+        this.suppliers = data;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.error = this.lang.t('suppliers.errorLoad');
+        this.loading = false;
+        this.cdr.detectChanges();
+        console.error(err);
+      }
+    });
+  }
+
+  emptyForm(): Partial<Supplier> {
+    return { name: '', email: '', phone: '' };
+  }
+
+  openCreateForm(): void {
+    this.editingSupplier = null;
+    this.formData = this.emptyForm();
+    this.showForm = true;
+  }
+
+  openEditForm(supplier: Supplier): void {
+    this.editingSupplier = supplier;
+    this.formData = {
+      name: supplier.name,
+      email: supplier.email,
+      phone: supplier.phone
+    };
+    this.showForm = true;
+  }
+
+  cancelForm(): void {
+    this.showForm = false;
+    this.editingSupplier = null;
+  }
+
+  saveSupplier(): void {
+    if (!this.formData.name?.trim()) return;
+
+    if (this.editingSupplier) {
+      this.supplierService.update(this.editingSupplier.id, this.formData).subscribe({
+        next: () => {
+          this.showForm = false;
+          this.editingSupplier = null;
+          this.load();
+        },
+        error: (err) => console.error(err)
+      });
+    } else {
+      this.supplierService.create(this.formData).subscribe({
+        next: () => {
+          this.showForm = false;
+          this.load();
+        },
+        error: (err) => console.error(err)
+      });
+    }
+  }
+
+  async deleteSupplier(supplier: Supplier): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: this.lang.t('suppliers.confirmDeleteTitle'),
+      message: this.lang.t('suppliers.confirmDeleteMsg', { name: supplier.name }),
+      confirmText: this.lang.t('common.delete'),
+      cancelText: this.lang.t('common.cancel')
+    });
+
+    if (!confirmed) return;
+
+    this.supplierService.delete(supplier.id).subscribe({
+      next: () => this.load(),
+      error: (err) => {
+        console.error(err);
+        alert(this.lang.t('categories.errorDeleteGeneric'));
+      }
+    });
+  }
+}
+
+

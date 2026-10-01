@@ -1,0 +1,53 @@
+<div class="page-content">
+  <div class="page-header">
+    <h1>⚠️ Alertes de stock</h1>
+    <button class="btn-secondary no-print" (click)="printPage()">🖨️ Imprimer</button>
+  </div>
+
+  <div class="search-bar no-print">
+    <input
+      type="text"
+      [(ngModel)]="searchTerm"
+      placeholder="Rechercher par nom, SKU ou catégorie..."
+      class="search-input"
+    />
+    @if (searchTerm) {
+      <button class="btn-clear" (click)="clearSearch()">✕</button>
+    }
+  </div>
+
+  @if (filteredProducts.length === 0) {
+    <p class="empty-state">Aucune alerte de stock pour le moment.</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>Produit</th>
+          <th>SKU</th>
+          <th>Catégorie</th>
+          <th>Quantité</th>
+          <th>Seuil min.</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (product of filteredProducts; track product.id) {
+          <tr [class.low-stock]="product.quantity <= product.minQuantity">
+            <td>{{ product.name }}</td>
+            <td>{{ product.sku }}</td>
+            <td>{{ product.category?.name || '-' }}</td>
+            <td>{{ product.quantity }}</td>
+            <td>{{ product.minQuantity }}</td>
+            <td>
+              @if (product.quantity === 0) {
+                <span class="badge badge-danger">Rupture</span>
+              } @else {
+                <span class="badge badge-warning">Stock faible</span>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  EMPLOYE
+  AGENT_LOGISTIQUE
+  RESPONSABLE_LOGISTIQUE
+  DIRECTEUR_GENERAL
+}
+
+enum MovementType {
+  ENTREE
+  SORTIE
+}
+
+model User {
+  id        Int             @id @default(autoincrement())
+  name      String
+  email     String          @unique
+  password  String
+  role      Role            @default(EMPLOYE)
+  phone     String?
+  address   String?
+  avatarUrl String?
+  movements StockMovement[]
+  createdAt DateTime        @default(now())
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  products  Product[]
+  deletedAt DateTime?
+}
+
+model Supplier {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  products  Product[]
+  deletedAt DateTime?
+}
+
+model Product {
+  id          Int             @id @default(autoincrement())
+  name        String
+  sku         String          @unique
+  description String?
+  imageUrl    String?
+  price       Float
+  quantity    Int             @default(0)
+  minQuantity Int             @default(5)
+  category    Category?       @relation(fields: [categoryId], references: [id])
+  categoryId  Int?
+  supplier    Supplier?       @relation(fields: [supplierId], references: [id])
+  supplierId  Int?
+  movements   StockMovement[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  deletedAt   DateTime?
+}
+
+model StockMovement {
+  id        Int          @id @default(autoincrement())
+  product   Product      @relation(fields: [productId], references: [id])
+  productId Int
+  type      MovementType
+  quantity  Int
+  reason    String?
+  user      User?        @relation(fields: [userId], references: [id])
+  userId    Int?
+  createdAt DateTime     @default(now())
+  deletedAt DateTime?
+}

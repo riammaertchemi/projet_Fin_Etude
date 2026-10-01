@@ -1,0 +1,25 @@
+Voici la structure du projet frontend (Angular) telle qu'elle est actuellement sur ton PC :
+
+**Racine de l'app** — `src/app/`
+- `app.ts`, `app.html`, `app.css` : le squelette général de l'application (barre de navigation, mise en page commune à toutes les pages)
+- `app.routes.ts` : la liste des routes (quelle page s'affiche pour chaque URL — /login, /home, /products, etc.)
+
+**services/** — la logique partagée, indépendante de l'affichage :
+- `auth.ts` : connexion, inscription, mot de passe oublié
+- `product.ts`, `category.ts`, `supplier.ts`, `stock-movement.ts` : appels au serveur pour chaque type de donnée
+- `lang.ts` + `translations.ts` : gestion des langues (français/anglais/arabe)
+- `theme.ts` : mode sombre/clair
+- `trash.ts`, `confirm-dialog.ts` : corbeille et boîtes de confirmation
+
+**pipes/** : `translate.ts`, utilisé dans les pages pour afficher le bon texte selon la langue
+
+**interceptors/** : `auth-interceptor.ts`, qui ajoute automatiquement ton jeton de connexion à chaque requête envoyée au serveur
+
+**pages/** — une page = un dossier avec 3 fichiers (`.ts` la logique, `.html` l'affichage, `.css` le style) :
+`login`, `register`, `forgot-password`, `reset-password`, `home` (le tableau de bord), `products`, `categories`, `suppliers`, `stock-movements`, `alerts`, `trash`, `profile`
+
+Le serveur (backend), lui, est beaucoup plus simple : un seul fichier `index.js` (dans `C:\Users\HP\AlbideyNet`) qui contient toutes les routes de l'API, avec Prisma pour parler à la base de données PostgreSQL.
+
+Une remarque au passage : ton dossier contient aussi pas mal de fichiers `.bak...` (des sauvegardes automatiques de tes anciennes versions, ex. `home.css.bak-fond`, `login.html.bak4`). Ils ne gênent pas le fonctionnement de l'app, mais si tu veux qu'on fasse un peu de ménage un jour pour y voir plus clair, dis-le-moi.
+
+Tu veux que je détaille un fichier ou une page en particulier ?

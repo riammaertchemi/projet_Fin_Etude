@@ -1,0 +1,101 @@
+﻿import { Component, ElementRef, HostListener, signal } from '@angular/core';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { Auth } from './services/auth';
+import { ThemeService } from './services/theme';
+import { ConfirmDialogService } from './services/confirm-dialog';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
+  templateUrl: './app.html',
+  styleUrl: './app.css'
+})
+export class App {
+  profileMenuOpen = signal(false);
+
+  private roleLabels: Record<string, string> = {
+    ADMIN: 'Administrateur',
+    MANAGER: 'Responsable de Stock',
+    EMPLOYE: 'Employé',
+    AGENT_LOGISTIQUE: 'Agent',
+    RESPONSABLE_LOGISTIQUE: 'Directeur Logistique',
+    DIRECTEUR_GENERAL: 'Directeur Général'
+  };
+
+  private roleClasses: Record<string, string> = {
+    ADMIN: 'role-admin',
+    MANAGER: 'role-manager',
+    EMPLOYE: 'role-employe',
+    AGENT_LOGISTIQUE: 'role-agent-logistique',
+    RESPONSABLE_LOGISTIQUE: 'role-responsable-logistique',
+    DIRECTEUR_GENERAL: 'role-directeur-general'
+  };
+
+  private roleIcons: Record<string, string> = {
+    ADMIN: '👑',
+    MANAGER: '📦',
+    EMPLOYE: '👤',
+    AGENT_LOGISTIQUE: '🚚',
+    RESPONSABLE_LOGISTIQUE: '🧭',
+    DIRECTEUR_GENERAL: '🏢'
+  };
+
+  constructor(
+    public auth: Auth,
+    private router: Router,
+    public theme: ThemeService,
+    public confirmDialog: ConfirmDialogService,
+    private elementRef: ElementRef
+  ) {}
+
+  get roleLabel(): string {
+    const role = this.auth.currentUser()?.role;
+    return role ? (this.roleLabels[role] || role) : '';
+  }
+
+  get roleClass(): string {
+    const role = this.auth.currentUser()?.role;
+    return role ? (this.roleClasses[role] || '') : '';
+  }
+
+  get roleIcon(): string {
+    const role = this.auth.currentUser()?.role;
+    return role ? (this.roleIcons[role] || '👤') : '👤';
+  }
+
+  get initials(): string {
+    const name = this.auth.currentUser()?.name || '';
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part[0]?.toUpperCase())
+      .join('');
+  }
+
+  toggleProfileMenu(): void {
+    this.profileMenuOpen.set(!this.profileMenuOpen());
+  }
+
+  closeProfileMenu(): void {
+    this.profileMenuOpen.set(false);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.profileMenuOpen()) return;
+    const target = event.target as HTMLElement;
+    const menuEl = this.elementRef.nativeElement.querySelector('.profile-menu');
+    if (menuEl && !menuEl.contains(target)) {
+      this.closeProfileMenu();
+    }
+  }
+
+  logout(): void {
+    this.closeProfileMenu();
+    this.auth.logout();
+    this.router.navigate(['/login']);
+  }
+}

@@ -1,0 +1,53 @@
+﻿<div class="page-content">
+  <div class="page-header">
+    <h1>{{ 'alerts.title' | translate }}</h1>
+    <button class="btn-primary no-print" (click)="printPage()">🖨️ {{ 'common.print' | translate }}</button>
+  </div>
+
+  <div class="search-bar no-print">
+    <input
+      type="text"
+      [(ngModel)]="searchTerm"
+      [placeholder]="'alerts.searchPlaceholder' | translate"
+      class="search-input"
+    />
+    @if (searchTerm) {
+      <button class="btn-clear" (click)="clearSearch()">✕</button>
+    }
+  </div>
+
+  @if (filteredProducts.length === 0) {
+    <p class="empty-state">{{ 'alerts.notFound' | translate }}</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>{{ 'alerts.colProduct' | translate }}</th>
+          <th>{{ 'alerts.colSku' | translate }}</th>
+          <th>{{ 'alerts.colCategory' | translate }}</th>
+          <th>{{ 'alerts.colQuantity' | translate }}</th>
+          <th>{{ 'alerts.colMinThreshold' | translate }}</th>
+          <th>{{ 'alerts.colStatus' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (product of filteredProducts; track product.id) {
+          <tr [class.low-stock]="product.quantity <= product.minQuantity">
+            <td>{{ product.name }}</td>
+            <td>{{ product.sku }}</td>
+            <td>{{ product.category?.name || '-' }}</td>
+            <td>{{ product.quantity }}</td>
+            <td>{{ product.minQuantity }}</td>
+            <td>
+              @if (product.quantity === 0) {
+                <span class="badge badge-danger">{{ 'alerts.statusOut' | translate }}</span>
+              } @else {
+                <span class="badge badge-warning">{{ 'alerts.statusLow' | translate }}</span>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

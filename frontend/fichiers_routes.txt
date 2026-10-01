@@ -1,0 +1,41 @@
+===== C:\Users\HP\albideynet-frontend\src\app\app.config.ts =====
+import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+
+import { routes } from './app.routes';
+import { authInterceptor } from './interceptors/auth-interceptor';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideZoneChangeDetection({ eventCoalescing: true }),
+    provideRouter(routes),
+    provideHttpClient(withInterceptors([authInterceptor])),
+  ],
+};
+
+
+===== C:\Users\HP\albideynet-frontend\src\app\app.routes.ts =====
+import { Routes } from '@angular/router';
+import { Login } from './pages/login/login';
+import { Home } from './pages/home/home';
+import { Products } from './pages/products/products';
+import { Categories } from './pages/categories/categories';
+import { Suppliers } from './pages/suppliers/suppliers';
+import { StockMovements } from './pages/stock-movements/stock-movements';
+import { Alerts } from './pages/alerts/alerts';
+import { Profile } from './pages/profile/profile';
+
+export const routes: Routes = [
+  { path: 'login', component: Login },
+  { path: 'home', component: Home },
+  { path: 'products', component: Products },
+  { path: 'categories', component: Categories },
+  { path: 'suppliers', component: Suppliers },
+  { path: 'stock-movements', component: StockMovements },
+  { path: 'alerts', component: Alerts },
+  { path: 'profile', component: Profile },
+  { path: '', redirectTo: '/login', pathMatch: 'full' }
+];
+
+

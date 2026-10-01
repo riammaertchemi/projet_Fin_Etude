@@ -1,0 +1,92 @@
+﻿<div class="home-container">
+  <div class="dashboard-header">
+    <h1>{{ 'home.title' | translate }}</h1>
+    <p class="dashboard-date">{{ today }}</p>
+  </div>
+
+  @if (loading) {
+    <p>{{ 'common.loading' | translate }}</p>
+  } @else {
+    <div class="stats-grid">
+      <div class="stat-card products">
+        <a routerLink="/products" class="stat-card-link">
+          <div class="stat-icon">📦</div>
+          <div class="stat-value">{{ productCount }}</div>
+          <div class="stat-label">{{ 'home.products' | translate }}</div>
+        </a>
+        <div class="stat-search">
+          <input
+            type="text"
+            [placeholder]="'home.searchProducts' | translate"
+            [(ngModel)]="searchProducts"
+            (keyup.enter)="goToSearch('/products', searchProducts)">
+          <button (click)="goToSearch('/products', searchProducts)">🔍</button>
+        </div>
+      </div>
+
+      <div class="stat-card categories">
+        <a routerLink="/categories" class="stat-card-link">
+          <div class="stat-icon">📁</div>
+          <div class="stat-value">{{ categoryCount }}</div>
+          <div class="stat-label">{{ 'home.categories' | translate }}</div>
+        </a>
+        <div class="stat-search">
+          <input
+            type="text"
+            [placeholder]="'home.searchCategories' | translate"
+            [(ngModel)]="searchCategories"
+            (keyup.enter)="goToSearch('/categories', searchCategories)">
+          <button (click)="goToSearch('/categories', searchCategories)">🔍</button>
+        </div>
+      </div>
+
+      <div class="stat-card suppliers">
+        <a routerLink="/suppliers" class="stat-card-link">
+          <div class="stat-icon">🚚</div>
+          <div class="stat-value">{{ supplierCount }}</div>
+          <div class="stat-label">{{ 'home.suppliers' | translate }}</div>
+        </a>
+        <div class="stat-search">
+          <input
+            type="text"
+            [placeholder]="'home.searchSuppliers' | translate"
+            [(ngModel)]="searchSuppliers"
+            (keyup.enter)="goToSearch('/suppliers', searchSuppliers)">
+          <button (click)="goToSearch('/suppliers', searchSuppliers)">🔍</button>
+        </div>
+      </div>
+
+      <div class="stat-card movements">
+        <a routerLink="/stock-movements" class="stat-card-link">
+          <div class="stat-icon">🔄</div>
+          <div class="stat-value">{{ movementCount }}</div>
+          <div class="stat-label">{{ 'home.movements' | translate }}</div>
+        </a>
+        <div class="stat-search">
+          <input
+            type="text"
+            [placeholder]="'home.searchMovements' | translate"
+            [(ngModel)]="searchMovements"
+            (keyup.enter)="goToSearch('/stock-movements', searchMovements)">
+          <button (click)="goToSearch('/stock-movements', searchMovements)">🔍</button>
+        </div>
+      </div>
+
+      <div class="stat-card alerts">
+        <a routerLink="/alerts" class="stat-card-link">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-value">{{ lowStockCount }}</div>
+          <div class="stat-label">{{ 'home.alertsLabel' | translate }}</div>
+        </a>
+        <div class="stat-search">
+          <input
+            type="text"
+            [placeholder]="'home.searchAlerts' | translate"
+            [(ngModel)]="searchAlerts"
+            (keyup.enter)="goToSearch('/alerts', searchAlerts)">
+          <button (click)="goToSearch('/alerts', searchAlerts)">🔍</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

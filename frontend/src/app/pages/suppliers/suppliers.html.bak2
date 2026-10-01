@@ -1,0 +1,84 @@
+﻿<div class="suppliers-page">
+  <div class="page-header">
+    <h1>Fournisseurs</h1>
+    <div class="header-actions no-print">
+      <button class="btn-secondary" (click)="printPage()">🖨️ Imprimer</button>
+      @if (canManage) {
+        <button class="btn-primary" (click)="openCreateForm()">+ Nouveau fournisseur</button>
+      }
+    </div>
+  </div>
+
+  <div class="search-bar no-print">
+    <input type="text" [(ngModel)]="searchTerm" placeholder="Rechercher un fournisseur (nom, email, téléphone)...">
+    @if (searchTerm) {
+      <button class="btn-clear" (click)="clearSearch()">✕ Effacer</button>
+    }
+  </div>
+
+  @if (loading) {
+    <p>Chargement...</p>
+  }
+
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  @if (showForm) {
+    <div class="form-overlay no-print">
+      <div class="form-card">
+        <h2>{{ editingSupplier ? 'Modifier le fournisseur' : 'Nouveau fournisseur' }}</h2>
+
+        <label>Nom</label>
+        <input type="text" [(ngModel)]="formData.name" placeholder="Nom du fournisseur">
+
+        <label>Email</label>
+        <input type="email" [(ngModel)]="formData.email" placeholder="Email">
+
+        <label>Téléphone</label>
+        <input type="text" [(ngModel)]="formData.phone" placeholder="Téléphone">
+
+        <div class="form-actions">
+          <button class="btn-secondary" (click)="cancelForm()">Annuler</button>
+          <button class="btn-primary" (click)="saveSupplier()">{{ editingSupplier ? 'Mettre à jour' : 'Enregistrer' }}</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (!loading && !error) {
+    @if (filteredSuppliers.length === 0) {
+      <p>Aucun fournisseur trouvé{{ searchTerm ? ' pour "' + searchTerm + '"' : '' }}.</p>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Email</th>
+            <th>Téléphone</th>
+            <th>Nombre de produits</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (supplier of filteredSuppliers; track supplier.id) {
+            <tr>
+              <td>{{ supplier.name }}</td>
+              <td>{{ supplier.email || '-' }}</td>
+              <td>{{ supplier.phone || '-' }}</td>
+              <td>{{ supplier.products?.length || 0 }}</td>
+              <td class="actions">
+                @if (canManage) {
+                  <button class="btn-edit" (click)="openEditForm(supplier)">Modifier</button>
+                  <button class="btn-delete" (click)="deleteSupplier(supplier)">Supprimer</button>
+                } @else {
+                  <span style="color:#94a3b8;font-style:italic;font-size:13px;">Lecture seule</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+</div>

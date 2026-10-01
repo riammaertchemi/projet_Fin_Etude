@@ -1,0 +1,219 @@
+﻿import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { Category, CategoryService } from '../../services/category';
+import { ConfirmDialogService } from '../../services/confirm-dialog';
+import { Auth } from '../../services/auth';
+import { LangService } from '../../services/lang';
+import { TranslatePipe } from '../../pipes/translate';
+
+@Component({
+  selector: 'app-categories',
+  standalone: true,
+  imports: [CommonModule, FormsModule, TranslatePipe],
+  templateUrl: './categories.html',
+  styleUrl: './categories.css'
+})
+export class Categories implements OnInit {
+  categories: Category[] = [];
+  loading = true;
+  error = '';
+
+  searchTerm = '';
+
+  showForm = false;
+  newCategoryName = '';
+  editingCategory: Category | null = null;
+
+  constructor(
+    private categoryService: CategoryService,
+    private confirmDialog: ConfirmDialogService,
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute,
+    public auth: Auth,
+    public lang: LangService
+  ) {}
+
+  get canManage(): boolean {
+    const role = this.auth.currentUser()?.role;
+    return role === 'ADMIN' || role === 'DIRECTEUR_GENERAL' || role === 'RESPONSABLE_LOGISTIQUE';
+  }
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      this.searchTerm = params['search'] || '';
+      this.cdr.detectChanges();
+    });
+    this.load();
+  }
+
+  get filteredCategories(): Category[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) return this.categories;
+    return this.categories.filter(c => c.name?.toLowerCase().includes(term));
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+  }
+
+  printPage(): void {
+    window.print();
+  }
+
+  load(): void {
+    this.loading = true;
+    this.categoryService.getAll().subscribe({
+      next: (data) => {
+        this.categories = data;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.error = this.lang.t('categories.errorLoad');
+        this.loading = false;
+        this.cdr.detectChanges();
+        console.error(err);
+      }
+    });
+  }
+
+  openCreateForm(): void {
+    this.editingCategory = null;
+    this.newCategoryName = '';
+    this.showForm = true;
+  }
+
+  openEditForm(category: Category): void {
+    this.editingCategory = category;
+    this.newCategoryName = category.name;
+    this.showForm = true;
+  }
+
+  cancelForm(): void {
+    this.showForm = false;
+    this.editingCategory = null;
+  }
+
+  saveCategory(): void {
+    if (!this.newCategoryName.trim()) return;
+
+    if (this.editingCategory) {
+      this.categoryService.update(this.editingCategory.id, { name: this.newCategoryName }).subscribe({
+        next: () => {
+          this.showForm = false;
+          this.editingCategory = null;
+          this.load();
+        },
+        error: (err) => console.error(err)
+      });
+    } else {
+      this.categoryService.create({ name: this.newCategoryName }).subscribe({
+        next: () => {
+          this.showForm = false;
+          this.load();
+        },
+        error: (err) => console.error(err)
+      });
+    }
+  }
+
+  selectionMode = false;
+
+  toggleSelectionMode(): void {
+    this.selectionMode = !this.selectionMode;
+    if (!this.selectionMode) {
+      this.clearSelection();
+    }
+  }
+  selectedIds = new Set<number>();
+
+  isSelected(item: { id: number }): boolean {
+    return this.selectedIds.has(item.id);
+  }
+
+  toggleSelect(item: { id: number }): void {
+    if (this.selectedIds.has(item.id)) {
+      this.selectedIds.delete(item.id);
+    } else {
+      this.selectedIds.add(item.id);
+    }
+  }
+
+  get allSelected(): boolean {
+    return this.filteredCategories.length > 0 && this.filteredCategories.every((x: { id: number }) => this.selectedIds.has(x.id));
+  }
+
+  toggleSelectAll(): void {
+    if (this.allSelected) {
+      this.clearSelection();
+    } else {
+      this.filteredCategories.forEach((x: { id: number }) => this.selectedIds.add(x.id));
+    }
+  }
+
+  clearSelection(): void {
+    this.selectedIds.clear();
+  }
+
+  async deleteSelected(): Promise<void> {
+    if (this.selectedIds.size === 0) return;
+
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Confirmer la suppression',
+      message: 'Supprimer ' + this.selectedIds.size + ' element(s) selectionne(s) ? (Ils seront envoyes a la Corbeille, restaurables.)',
+      confirmText: this.lang.t('common.delete'),
+      cancelText: this.lang.t('common.cancel')
+    });
+
+    if (!confirmed) return;
+
+    const ids = Array.from(this.selectedIds);
+    let remaining = ids.length;
+    let hadError = false;
+
+    ids.forEach(id => {
+      this.categoryService.delete(id).subscribe({
+        next: () => {
+          remaining--;
+          if (remaining === 0) {
+            this.clearSelection();
+            this.load();
+            if (hadError) { alert('Certains elements n\'ont pas pu etre supprimes.'); }
+          }
+        },
+        error: (err: any) => {
+          console.error(err);
+          hadError = true;
+          remaining--;
+          if (remaining === 0) {
+            this.clearSelection();
+            this.load();
+            alert('Certains elements n\'ont pas pu etre supprimes.');
+          }
+        }
+      });
+    });
+  }
+  async deleteCategory(category: Category): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: this.lang.t('categories.confirmDeleteTitle'),
+      message: this.lang.t('categories.confirmDeleteMsg', { name: category.name }),
+      confirmText: this.lang.t('common.delete'),
+      cancelText: this.lang.t('common.cancel')
+    });
+
+    if (!confirmed) return;
+
+    this.categoryService.delete(category.id).subscribe({
+      next: () => this.load(),
+      error: (err) => {
+        console.error(err);
+        alert(this.lang.t('categories.errorDeleteGeneric'));
+      }
+    });
+  }
+}
+
+

@@ -1,0 +1,161 @@
+﻿<div class="trash-page">
+  <div class="page-header">
+    <h2>🗑️ Corbeille</h2>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="load()">Actualiser</button>
+    </div>
+  </div>
+ 
+  @if (actionError) {
+    <div class="error">{{ actionError }}</div>
+  }
+ 
+  @if (loading) {
+    <p>Chargement...</p>
+  } @else if (error) {
+    <div class="error">{{ error }}</div>
+  } @else {
+    <div class="trash-tabs">
+      <button class="trash-tab" [class.active]="activeTab === 'products'" (click)="setTab('products')">
+        Produits <span class="tab-count">{{ data.products.length }}</span>
+      </button>
+      <button class="trash-tab" [class.active]="activeTab === 'categories'" (click)="setTab('categories')">
+        Catégories <span class="tab-count">{{ data.categories.length }}</span>
+      </button>
+      <button class="trash-tab" [class.active]="activeTab === 'suppliers'" (click)="setTab('suppliers')">
+        Fournisseurs <span class="tab-count">{{ data.suppliers.length }}</span>
+      </button>
+      <button class="trash-tab" [class.active]="activeTab === 'movements'" (click)="setTab('movements')">
+        Mouvements <span class="tab-count">{{ data.movements.length }}</span>
+      </button>
+    </div>
+ 
+    @if (totalCount === 0) {
+      <div class="empty-trash">
+        <div class="empty-icon">🗑️</div>
+        <p>La corbeille est vide.</p>
+      </div>
+    } @else {
+ 
+      @if (activeTab === 'products') {
+        @if (data.products.length === 0) {
+          <p class="empty-tab">Aucun produit dans la corbeille.</p>
+        } @else {
+          <table class="trash-table">
+            <thead>
+              <tr>
+                <th>Produit</th>
+                <th>SKU</th>
+                <th>Supprimé le</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (product of data.products; track product.id) {
+                <tr>
+                  <td>{{ product.name }}</td>
+                  <td>{{ product.sku }}</td>
+                  <td>{{ formatDate(product.deletedAt) }}</td>
+                  <td class="actions-cell">
+                    <button class="btn-restore" (click)="restoreProduct(product.id)">Restaurer</button>
+                    <button class="btn-delete-forever" (click)="permanentDeleteProduct(product.id, product.name)">Supprimer définitivement</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      }
+ 
+      @if (activeTab === 'categories') {
+        @if (data.categories.length === 0) {
+          <p class="empty-tab">Aucune catégorie dans la corbeille.</p>
+        } @else {
+          <table class="trash-table">
+            <thead>
+              <tr>
+                <th>Catégorie</th>
+                <th>Supprimée le</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (category of data.categories; track category.id) {
+                <tr>
+                  <td>{{ category.name }}</td>
+                  <td>{{ formatDate(category.deletedAt) }}</td>
+                  <td class="actions-cell">
+                    <button class="btn-restore" (click)="restoreCategory(category.id)">Restaurer</button>
+                    <button class="btn-delete-forever" (click)="permanentDeleteCategory(category.id, category.name)">Supprimer définitivement</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      }
+ 
+      @if (activeTab === 'suppliers') {
+        @if (data.suppliers.length === 0) {
+          <p class="empty-tab">Aucun fournisseur dans la corbeille.</p>
+        } @else {
+          <table class="trash-table">
+            <thead>
+              <tr>
+                <th>Fournisseur</th>
+                <th>Email</th>
+                <th>Supprimé le</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (supplier of data.suppliers; track supplier.id) {
+                <tr>
+                  <td>{{ supplier.name }}</td>
+                  <td>{{ supplier.email || '—' }}</td>
+                  <td>{{ formatDate(supplier.deletedAt) }}</td>
+                  <td class="actions-cell">
+                    <button class="btn-restore" (click)="restoreSupplier(supplier.id)">Restaurer</button>
+                    <button class="btn-delete-forever" (click)="permanentDeleteSupplier(supplier.id, supplier.name)">Supprimer définitivement</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      }
+ 
+      @if (activeTab === 'movements') {
+        @if (data.movements.length === 0) {
+          <p class="empty-tab">Aucun mouvement dans la corbeille.</p>
+        } @else {
+          <table class="trash-table">
+            <thead>
+              <tr>
+                <th>Produit</th>
+                <th>Type</th>
+                <th>Quantité</th>
+                <th>Supprimé le</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (movement of data.movements; track movement.id) {
+                <tr>
+                  <td>{{ movement.product?.name || '—' }}</td>
+                  <td>{{ movement.type }}</td>
+                  <td>{{ movement.quantity }}</td>
+                  <td>{{ formatDate(movement.deletedAt) }}</td>
+                  <td class="actions-cell">
+                    <button class="btn-restore" (click)="restoreMovement(movement.id)">Restaurer</button>
+                    <button class="btn-delete-forever" (click)="permanentDeleteMovement(movement.id)">Supprimer définitivement</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      }
+    }
+  }
+</div>

@@ -1,0 +1,92 @@
+﻿import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { ProductService } from '../../services/product';
+import { CategoryService } from '../../services/category';
+import { SupplierService } from '../../services/supplier';
+import { StockMovementService } from '../../services/stock-movement';
+import { Auth } from '../../services/auth';
+
+@Component({
+  selector: 'app-home',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterLink],
+  templateUrl: './home.html',
+  styleUrl: './home.css'
+})
+export class Home implements OnInit {
+  productCount = 0;
+  categoryCount = 0;
+  supplierCount = 0;
+  movementCount = 0;
+  lowStockCount = 0;
+  loading = true;
+
+  searchProducts = '';
+  searchCategories = '';
+  searchSuppliers = '';
+  searchMovements = '';
+  searchAlerts = '';
+
+  constructor(
+    private productService: ProductService,
+    private categoryService: CategoryService,
+    private supplierService: SupplierService,
+    private stockMovementService: StockMovementService,
+    private cdr: ChangeDetectorRef,
+    private router: Router,
+    public auth: Auth
+  ) {}
+
+  get today(): string {
+    const formatted = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  }
+
+  ngOnInit(): void {
+    let loaded = 0;
+    const total = 5;
+    const checkDone = () => {
+      loaded++;
+      if (loaded === total) {
+        this.loading = false;
+        this.cdr.detectChanges();
+      }
+    };
+
+    this.productService.getAll().subscribe({
+      next: (data) => { this.productCount = data.length; checkDone(); },
+      error: () => checkDone()
+    });
+
+    this.categoryService.getAll().subscribe({
+      next: (data) => { this.categoryCount = data.length; checkDone(); },
+      error: () => checkDone()
+    });
+
+    this.supplierService.getAll().subscribe({
+      next: (data) => { this.supplierCount = data.length; checkDone(); },
+      error: () => checkDone()
+    });
+
+    this.stockMovementService.getAll().subscribe({
+      next: (data) => { this.movementCount = data.length; checkDone(); },
+      error: () => checkDone()
+    });
+
+    this.productService.getLowStock().subscribe({
+      next: (data) => { this.lowStockCount = data.length; checkDone(); },
+      error: () => checkDone()
+    });
+  }
+
+  goToSearch(path: string, term: string): void {
+    const value = (term || '').trim();
+    if (value) {
+      this.router.navigate([path], { queryParams: { search: value } });
+    } else {
+      this.router.navigate([path]);
+    }
+  }
+}

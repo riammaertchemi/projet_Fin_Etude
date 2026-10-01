@@ -1,0 +1,103 @@
+﻿<div class="page-content">
+  <div class="page-header">
+    <div>
+      <h1>{{ 'profile.pageTitle' | translate }}</h1>
+      <p class="page-subtitle">{{ 'profile.subtitle' | translate }}</p>
+    </div>
+  </div>
+
+  @if (user) {
+    <div class="profile-card">
+      <div class="profile-banner">
+        <button class="btn-edit-floating" (click)="openEditForm()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+          </svg>
+          {{ 'common.edit' | translate }}
+        </button>
+        <div class="profile-avatar-wrap">
+          @if (user.avatarUrl) {
+            <img [src]="user.avatarUrl" alt="Photo de profil" class="profile-avatar-img">
+          } @else {
+            <span class="profile-avatar-placeholder">{{ initials }}</span>
+          }
+        </div>
+      </div>
+
+      <div class="profile-identity">
+        <div class="profile-identity-text">
+          <h2>{{ user.name }}</h2>
+          <span class="role-badge">{{ roleLabel }}</span>
+        </div>
+      </div>
+
+      <div class="profile-divider"></div>
+
+      <div class="profile-info-grid">
+        <div class="info-row">
+          <span class="info-icon">@</span>
+          <div class="info-text">
+            <small>{{ 'profile.email' | translate }}</small>
+            <strong>{{ user.email }}</strong>
+          </div>
+        </div>
+        <div class="info-row">
+          <span class="info-icon">#</span>
+          <div class="info-text">
+            <small>{{ 'profile.phone' | translate }}</small>
+            <strong>{{ user.phone || ('profile.phoneNotSet' | translate) }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showForm) {
+    <div class="modal-overlay" (click)="closeForm()">
+      <div class="form-card" (click)="$event.stopPropagation()">
+        <h2>{{ 'profile.editFormTitle' | translate }}</h2>
+
+        @if (errorMessage) {
+          <p class="error-message">{{ errorMessage }}</p>
+        }
+
+        <div class="image-upload">
+          @if (form.avatarUrl) {
+            <div class="image-preview">
+              <img [src]="form.avatarUrl" alt="Apercu">
+              <button type="button" class="btn-remove-image" (click)="removeImage()">X</button>
+            </div>
+          } @else {
+            <label class="image-upload-label">
+              <input type="file" accept="image/*" (change)="onImageSelected($event)" hidden>
+              <span>{{ 'profile.choosePhoto' | translate }}</span>
+            </label>
+          }
+        </div>
+
+        <div class="form-group">
+          <label>{{ 'profile.usernameLabel' | translate }}</label>
+          <input type="text" [(ngModel)]="form.name" [placeholder]="'products.name' | translate">
+        </div>
+
+        <div class="form-group">
+          <label>{{ 'profile.email' | translate }}</label>
+          <input type="email" [(ngModel)]="form.email" placeholder="exemple@gmail.com">
+        </div>
+
+        <div class="form-group">
+          <label>{{ 'profile.phone' | translate }}</label>
+          <input type="text" [(ngModel)]="form.phone" placeholder="Ex: 66009900">
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-secondary" (click)="closeForm()">{{ 'common.cancel' | translate }}</button>
+          <button class="btn-primary" (click)="save()" [disabled]="saving">
+            {{ saving ? ('profile.saving' | translate) : ('common.save' | translate) }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

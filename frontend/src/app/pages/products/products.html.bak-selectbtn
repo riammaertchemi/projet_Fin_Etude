@@ -1,0 +1,142 @@
+﻿<div class="products-page">
+  <div class="page-header">
+    <h1>{{ 'products.title' | translate }}</h1>
+    <div class="header-actions no-print">
+      <button class="btn-secondary" (click)="printPage()">🖨️ {{ 'common.print' | translate }}</button>
+      @if (canManage) {
+        <button class="btn-primary" (click)="openCreateForm()"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:5px;"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>{{ 'products.newProduct' | translate }}</button>
+      }
+    </div>
+  </div>
+
+  @if (canManage && selectedIds.size > 0) {
+  <div class="bulk-actions no-print" style="display:flex; align-items:center; gap:12px; padding:10px 16px; background:#eaf1fa; border:1px solid #cfe0f3; border-radius:8px; margin:0 0 12px 0;">
+    <span>{{ selectedIds.size }} selectionne(s)</span>
+    <button class="btn-delete" (click)="deleteSelected()">Supprimer la selection</button>
+    <button class="btn-secondary" (click)="clearSelection()">Annuler la selection</button>
+  </div>
+  }
+
+  <div class="search-bar no-print">
+    <input type="text" [(ngModel)]="searchTerm" [placeholder]="'products.searchPlaceholder' | translate">
+    @if (searchTerm) {
+      <button class="btn-clear" (click)="clearSearch()">✕ {{ 'common.clear' | translate }}</button>
+    }
+  </div>
+
+  @if (loading) {
+    <p>{{ 'common.loading' | translate }}</p>
+  }
+
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  @if (showForm) {
+    <div class="form-overlay no-print">
+      <div class="form-card">
+        <h2>{{ editingProduct ? ('products.formTitleEdit' | translate) : ('products.formTitleNew' | translate) }}</h2>
+
+        @if (saveError) {
+          <p class="error">{{ saveError }}</p>
+        }
+
+        <label>{{ 'products.name' | translate }}</label>
+        <input type="text" [(ngModel)]="formData.name" [placeholder]="'products.name' | translate">
+
+        <label>{{ 'products.sku' | translate }}</label>
+        <input type="text" [(ngModel)]="formData.sku" [placeholder]="'products.skuPlaceholder' | translate">
+
+        <label>{{ 'products.description' | translate }}</label>
+        <textarea [(ngModel)]="formData.description" [placeholder]="'products.description' | translate"></textarea>
+
+        <label>{{ 'products.imageLabel' | translate }}</label>
+        <input type="file" accept="image/*" (change)="onImageSelected($event)">
+        @if (formData.imageUrl) {
+          <div class="image-preview">
+            <img [src]="formData.imageUrl" alt="Aperçu">
+            <button type="button" class="btn-clear" (click)="removeImage()">{{ 'products.removeImage' | translate }}</button>
+          </div>
+        }
+
+        <label>{{ 'products.priceLabel' | translate }}</label>
+        <input type="number" [(ngModel)]="formData.price">
+
+        <label>{{ 'products.quantityLabel' | translate }}</label>
+        <input type="number" [(ngModel)]="formData.quantity">
+
+        <label>{{ 'products.minQuantityLabel' | translate }}</label>
+        <input type="number" [(ngModel)]="formData.minQuantity">
+
+        <label>{{ 'products.categoryLabel' | translate }}</label>
+        <select [(ngModel)]="formData.categoryId">
+          <option [ngValue]="null">{{ 'products.categoryNone' | translate }}</option>
+          @for (category of categories; track category.id) {
+            <option [ngValue]="category.id">{{ category.name }}</option>
+          }
+        </select>
+
+        <label>{{ 'products.supplierLabel' | translate }}</label>
+        <select [(ngModel)]="formData.supplierId">
+          <option [ngValue]="null">{{ 'products.supplierNone' | translate }}</option>
+          @for (supplier of suppliers; track supplier.id) {
+            <option [ngValue]="supplier.id">{{ supplier.name }}</option>
+          }
+        </select>
+
+        <div class="form-actions">
+          <button class="btn-secondary" (click)="cancelForm()">{{ 'common.cancel' | translate }}</button>
+          <button class="btn-primary" (click)="saveProduct()">{{ 'common.save' | translate }}</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (!loading && !error) {
+    @if (filteredProducts.length === 0) {
+      <p>{{ 'products.notFound' | translate }}{{ searchTerm ? ' ' + ('common.forSearch' | translate) + ' "' + searchTerm + '"' : '' }}.</p>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            @if (canManage) { <th style="width:36px; text-align:center;"><input type="checkbox" [checked]="allSelected" (change)="toggleSelectAll()"></th> }
+            <th>{{ 'products.colImage' | translate }}</th>
+            <th>{{ 'products.colName' | translate }}</th>
+            <th>{{ 'products.colSku' | translate }}</th>
+            <th>{{ 'products.colPrice' | translate }}</th>
+            <th>{{ 'products.colQuantity' | translate }}</th>
+            <th>{{ 'products.colCategory' | translate }}</th>
+            @if (canManage) {
+              <th>{{ 'common.actions' | translate }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (product of filteredProducts; track product.id) {
+            <tr [class.low-stock]="product.quantity < product.minQuantity">
+              @if (canManage) { <td style="text-align:center;"><input type="checkbox" [checked]="isSelected(product)" (change)="toggleSelect(product)"></td> }
+              <td>
+                @if (product.imageUrl) {
+                  <img [src]="product.imageUrl" alt="{{ product.name }}" class="product-thumb">
+                } @else {
+                  <div class="product-thumb-placeholder">📦</div>
+                }
+              </td>
+              <td>{{ product.name }}</td>
+              <td>{{ product.sku }}</td>
+              <td>{{ formatPrice(product.price) }}</td>
+              <td>{{ product.quantity }}</td>
+              <td>{{ product.category?.name || '-' }}</td>
+              @if (canManage) {
+                <td class="actions">
+                  <button class="btn-edit" (click)="openEditForm(product)">✏️ {{ 'common.edit' | translate }}</button>
+                  <button class="btn-delete" (click)="deleteProduct(product)">🗑️ {{ 'common.delete' | translate }}</button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+</div>

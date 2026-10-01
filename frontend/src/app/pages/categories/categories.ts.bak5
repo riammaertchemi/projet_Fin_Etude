@@ -1,0 +1,136 @@
+﻿import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { Category, CategoryService } from '../../services/category';
+import { ConfirmDialogService } from '../../services/confirm-dialog';
+import { Auth } from '../../services/auth';
+
+@Component({
+  selector: 'app-categories',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './categories.html',
+  styleUrl: './categories.css'
+})
+export class Categories implements OnInit {
+  categories: Category[] = [];
+  loading = true;
+  error = '';
+
+  searchTerm = '';
+
+  showForm = false;
+  newCategoryName = '';
+  editingCategory: Category | null = null;
+
+  constructor(
+    private categoryService: CategoryService,
+    private confirmDialog: ConfirmDialogService,
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute,
+    public auth: Auth
+  ) {}
+
+  get canManage(): boolean {
+    return this.auth.currentUser()?.role !== 'AGENT_LOGISTIQUE';
+  }
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      this.searchTerm = params['search'] || '';
+      this.cdr.detectChanges();
+    });
+    this.load();
+  }
+
+  get filteredCategories(): Category[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) return this.categories;
+    return this.categories.filter(c => c.name?.toLowerCase().includes(term));
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+  }
+
+  printPage(): void {
+    window.print();
+  }
+
+  load(): void {
+    this.loading = true;
+    this.categoryService.getAll().subscribe({
+      next: (data) => {
+        this.categories = data;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.error = 'Erreur lors du chargement des catégories';
+        this.loading = false;
+        this.cdr.detectChanges();
+        console.error(err);
+      }
+    });
+  }
+
+  openCreateForm(): void {
+    this.editingCategory = null;
+    this.newCategoryName = '';
+    this.showForm = true;
+  }
+
+  openEditForm(category: Category): void {
+    this.editingCategory = category;
+    this.newCategoryName = category.name;
+    this.showForm = true;
+  }
+
+  cancelForm(): void {
+    this.showForm = false;
+    this.editingCategory = null;
+  }
+
+  saveCategory(): void {
+    if (!this.newCategoryName.trim()) return;
+
+    if (this.editingCategory) {
+      this.categoryService.update(this.editingCategory.id, { name: this.newCategoryName }).subscribe({
+        next: () => {
+          this.showForm = false;
+          this.editingCategory = null;
+          this.load();
+        },
+        error: (err) => console.error(err)
+      });
+    } else {
+      this.categoryService.create({ name: this.newCategoryName }).subscribe({
+        next: () => {
+          this.showForm = false;
+          this.load();
+        },
+        error: (err) => console.error(err)
+      });
+    }
+  }
+
+  async deleteCategory(category: Category): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Supprimer cette catégorie ?',
+      message: `Voulez-vous vraiment supprimer la catégorie "${category.name}" ? Cette action est irréversible.`,
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler'
+    });
+
+    if (!confirmed) return;
+
+    this.categoryService.delete(category.id).subscribe({
+      next: () => this.load(),
+      error: (err) => {
+        console.error(err);
+        alert('Erreur lors de la suppression (vérifiez le backend).');
+      }
+    });
+  }
+}

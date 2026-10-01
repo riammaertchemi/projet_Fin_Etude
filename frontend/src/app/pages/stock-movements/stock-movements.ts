@@ -1,0 +1,274 @@
+﻿import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { StockMovement, StockMovementService } from '../../services/stock-movement';
+import { Product, ProductService } from '../../services/product';
+import { ConfirmDialogService } from '../../services/confirm-dialog';
+import { Auth } from '../../services/auth';
+import { LangService } from '../../services/lang';
+import { TranslatePipe } from '../../pipes/translate';
+
+@Component({
+  selector: 'app-stock-movements',
+  standalone: true,
+  imports: [CommonModule, FormsModule, TranslatePipe],
+  templateUrl: './stock-movements.html',
+  styleUrl: './stock-movements.css'
+})
+export class StockMovements implements OnInit {
+  movements: StockMovement[] = [];
+  products: Product[] = [];
+  loading = true;
+  error = '';
+
+  searchTerm = '';
+
+  showForm = false;
+  editingMovement: StockMovement | null = null;
+  formData: { productId: number | null; type: string; quantity: number; reason: string; date: string } = this.emptyForm();
+  saveError = '';
+
+  constructor(
+    private stockMovementService: StockMovementService,
+    private productService: ProductService,
+    private confirmDialog: ConfirmDialogService,
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute,
+    public auth: Auth,
+    public lang: LangService
+  ) {}
+
+  get canManage(): boolean {
+    const role = this.auth.currentUser()?.role;
+    return role === 'ADMIN' || role === 'DIRECTEUR_GENERAL' || role === 'RESPONSABLE_LOGISTIQUE';
+  }
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      this.searchTerm = params['search'] || '';
+      this.cdr.detectChanges();
+    });
+    this.load();
+    this.loadProducts();
+  }
+
+  get filteredMovements(): StockMovement[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) return this.movements;
+    return this.movements.filter(m =>
+      m.product?.name?.toLowerCase().includes(term) ||
+      m.type?.toLowerCase().includes(term) ||
+      m.reason?.toLowerCase().includes(term)
+    );
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+  }
+
+  printPage(): void {
+    window.print();
+  }
+
+  load(): void {
+    this.loading = true;
+    this.stockMovementService.getAll().subscribe({
+      next: (data) => {
+        this.movements = data;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.error = this.lang.t('movements.errorLoad');
+        this.loading = false;
+        this.cdr.detectChanges();
+        console.error(err);
+      }
+    });
+  }
+
+  loadProducts(): void {
+    this.productService.getAll().subscribe({
+      next: (data) => {
+        this.products = data;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error(err)
+    });
+  }
+
+  toInputDate(iso: string): string {
+    const d = new Date(iso);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  nowForInput(): string {
+    return this.toInputDate(new Date().toISOString());
+  }
+
+  emptyForm() {
+    return {
+      productId: null as number | null,
+      type: 'ENTREE',
+      quantity: 0,
+      reason: '',
+      date: this.nowForInput()
+    };
+  }
+
+  openCreateForm(): void {
+    this.editingMovement = null;
+    this.formData = this.emptyForm();
+    this.saveError = '';
+    this.showForm = true;
+  }
+
+  openEditForm(movement: StockMovement): void {
+    this.editingMovement = movement;
+    this.formData = {
+      productId: movement.productId,
+      type: movement.type,
+      quantity: movement.quantity,
+      reason: movement.reason || '',
+      date: this.toInputDate(movement.createdAt)
+    };
+    this.saveError = '';
+    this.showForm = true;
+  }
+
+  cancelForm(): void {
+    this.showForm = false;
+    this.editingMovement = null;
+  }
+
+  saveMovement(): void {
+    if (!this.formData.productId || !this.formData.quantity || this.formData.quantity <= 0) {
+      this.saveError = this.lang.t('movements.validationError');
+      return;
+    }
+
+    const payload = {
+      productId: this.formData.productId,
+      type: this.formData.type,
+      quantity: this.formData.quantity,
+      reason: this.formData.reason,
+      date: this.formData.date
+    };
+
+    const request = this.editingMovement
+      ? this.stockMovementService.update(this.editingMovement.id, payload)
+      : this.stockMovementService.create(payload);
+
+    request.subscribe({
+      next: () => {
+        this.showForm = false;
+        this.editingMovement = null;
+        this.load();
+      },
+      error: (err) => {
+        this.saveError = err?.error?.error || this.lang.t('movements.errorSave');
+        console.error(err);
+      }
+    });
+  }
+
+  selectionMode = false;
+
+  toggleSelectionMode(): void {
+    this.selectionMode = !this.selectionMode;
+    if (!this.selectionMode) {
+      this.clearSelection();
+    }
+  }
+  selectedIds = new Set<number>();
+
+  isSelected(item: { id: number }): boolean {
+    return this.selectedIds.has(item.id);
+  }
+
+  toggleSelect(item: { id: number }): void {
+    if (this.selectedIds.has(item.id)) {
+      this.selectedIds.delete(item.id);
+    } else {
+      this.selectedIds.add(item.id);
+    }
+  }
+
+  get allSelected(): boolean {
+    return this.filteredMovements.length > 0 && this.filteredMovements.every((x: { id: number }) => this.selectedIds.has(x.id));
+  }
+
+  toggleSelectAll(): void {
+    if (this.allSelected) {
+      this.clearSelection();
+    } else {
+      this.filteredMovements.forEach((x: { id: number }) => this.selectedIds.add(x.id));
+    }
+  }
+
+  clearSelection(): void {
+    this.selectedIds.clear();
+  }
+
+  async deleteSelected(): Promise<void> {
+    if (this.selectedIds.size === 0) return;
+
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Confirmer la suppression',
+      message: 'Supprimer ' + this.selectedIds.size + ' element(s) selectionne(s) ? (Ils seront envoyes a la Corbeille, restaurables.)',
+      confirmText: this.lang.t('common.delete'),
+      cancelText: this.lang.t('common.cancel')
+    });
+
+    if (!confirmed) return;
+
+    const ids = Array.from(this.selectedIds);
+    let remaining = ids.length;
+    let hadError = false;
+
+    ids.forEach(id => {
+      this.stockMovementService.delete(id).subscribe({
+        next: () => {
+          remaining--;
+          if (remaining === 0) {
+            this.clearSelection();
+            this.load();
+            if (hadError) { alert('Certains elements n\'ont pas pu etre supprimes.'); }
+          }
+        },
+        error: (err: any) => {
+          console.error(err);
+          hadError = true;
+          remaining--;
+          if (remaining === 0) {
+            this.clearSelection();
+            this.load();
+            alert('Certains elements n\'ont pas pu etre supprimes.');
+          }
+        }
+      });
+    });
+  }
+  async deleteMovement(movement: StockMovement): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: this.lang.t('movements.confirmDeleteTitle'),
+      message: this.lang.t('movements.confirmDeleteMsg', { type: movement.type, quantity: movement.quantity }),
+      confirmText: this.lang.t('common.delete'),
+      cancelText: this.lang.t('common.cancel')
+    });
+
+    if (!confirmed) return;
+
+    this.stockMovementService.delete(movement.id).subscribe({
+      next: () => this.load(),
+      error: (err) => {
+        alert(err?.error?.error || this.lang.t('movements.errorDelete'));
+        console.error(err);
+      }
+    });
+  }
+}
+
+

@@ -1,0 +1,176 @@
+﻿import { Component, ElementRef, HostListener, signal } from '@angular/core';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { Auth } from './services/auth';
+import { ThemeService } from './services/theme';
+import { ConfirmDialogService } from './services/confirm-dialog';
+import { LangService, Lang } from './services/lang';
+import { TranslatePipe } from './pipes/translate';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, TranslatePipe],
+  templateUrl: './app.html',
+  styleUrl: './app.css'
+})
+export class App {
+  profileMenuOpen = signal(false);
+  langMenuOpen = signal(false);
+
+  private roleKeyMap: Record<string, string> = {
+    ADMIN: 'admin',
+    MANAGER: 'manager',
+    EMPLOYE: 'employe',
+    AGENT_LOGISTIQUE: 'agentLogistique',
+    RESPONSABLE_LOGISTIQUE: 'responsableLogistique',
+    DIRECTEUR_GENERAL: 'directeurGeneral'
+  };
+
+  private roleClasses: Record<string, string> = {
+    ADMIN: 'role-admin',
+    MANAGER: 'role-manager',
+    EMPLOYE: 'role-employe',
+    AGENT_LOGISTIQUE: 'role-agent-logistique',
+    RESPONSABLE_LOGISTIQUE: 'role-responsable-logistique',
+    DIRECTEUR_GENERAL: 'role-directeur-general'
+  };
+
+  private roleIcons: Record<string, string> = {
+    ADMIN: '👑',
+    MANAGER: '📦',
+    EMPLOYE: '👤',
+    AGENT_LOGISTIQUE: '🚚',
+    RESPONSABLE_LOGISTIQUE: '🧭',
+    DIRECTEUR_GENERAL: '🏢'
+  };
+
+  constructor(
+    public auth: Auth,
+    private router: Router,
+    public theme: ThemeService,
+    public confirmDialog: ConfirmDialogService,
+    public lang: LangService,
+    private elementRef: ElementRef
+  ) {}
+
+  get roleLabel(): string {
+    const role = this.auth.currentUser()?.role;
+    if (!role) return '';
+    const key = this.roleKeyMap[role];
+    return key ? this.lang.t('roles.' + key) : role;
+  }
+
+  get roleClass(): string {
+    const role = this.auth.currentUser()?.role;
+    return role ? (this.roleClasses[role] || '') : '';
+  }
+
+  get roleIcon(): string {
+    const role = this.auth.currentUser()?.role;
+    return role ? (this.roleIcons[role] || '👤') : '👤';
+  }
+
+  get canAccessTrash(): boolean {
+    const role = this.auth.currentUser()?.role;
+    return role === 'ADMIN' || role === 'DIRECTEUR_GENERAL' || role === 'RESPONSABLE_LOGISTIQUE';
+  }
+
+  
+
+  get initials(): string {
+    const name = this.auth.currentUser()?.name || '';
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part[0]?.toUpperCase())
+      .join('');
+  }
+
+  get langLabel(): string {
+    switch (this.lang.lang()) {
+      case 'en': return 'English';
+      case 'ar': return 'العربية';
+      default: return 'Français';
+    }
+  }
+
+  setLang(l: Lang): void {
+    this.lang.setLang(l);
+    this.closeLangMenu();
+  }
+
+  toggleLangMenu(): void {
+    this.langMenuOpen.set(!this.langMenuOpen());
+    if (this.langMenuOpen()) {
+      this.profileMenuOpen.set(false);
+    }
+  }
+
+  closeLangMenu(): void {
+    this.langMenuOpen.set(false);
+  }
+
+  toggleProfileMenu(): void {
+    this.profileMenuOpen.set(!this.profileMenuOpen());
+    if (this.profileMenuOpen()) {
+      this.langMenuOpen.set(false);
+    }
+  }
+
+  closeProfileMenu(): void {
+    this.profileMenuOpen.set(false);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+
+    if (this.profileMenuOpen()) {
+      const profileEl = this.elementRef.nativeElement.querySelector('.profile-menu');
+      if (profileEl && !profileEl.contains(target)) {
+        this.closeProfileMenu();
+      }
+    }
+
+    if (this.langMenuOpen()) {
+      const langEl = this.elementRef.nativeElement.querySelector('.lang-menu');
+      if (langEl && !langEl.contains(target)) {
+        this.closeLangMenu();
+      }
+    }
+  }
+
+
+
+  
+
+  
+
+  aboutOpen = signal(false);
+
+  openAbout(): void {
+    this.aboutOpen.set(true);
+    this.profileMenuOpen.set(false);
+    this.langMenuOpen.set(false);
+  }
+
+  closeAbout(): void {
+    this.aboutOpen.set(false);
+  }
+
+  logout(): void {
+    this.closeProfileMenu();
+    this.auth.logout();
+    this.router.navigate(['/login']);
+  }
+}
+
+
+
+
+
+
+
+

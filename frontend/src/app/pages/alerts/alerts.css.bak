@@ -1,0 +1,150 @@
+﻿.page-content {
+  padding: 24px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.page-header h1 {
+  font-size: 24px;
+  color: #1e293b;
+  margin: 0;
+}
+
+.btn-secondary {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+.btn-secondary:hover {
+  background-color: #d1d5db;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  max-width: 400px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.btn-clear {
+  background: #e2e8f0;
+  border: none;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+thead tr {
+  background: #1e3a5f;
+}
+
+th {
+  color: white;
+  text-align: left;
+  padding: 14px 16px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+  color: #334155;
+}
+
+tr.low-stock {
+  background: #fef2f2;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-danger {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.badge-warning {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.empty-state {
+  text-align: center;
+  color: #64748b;
+  padding: 40px;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  th:last-child,
+  td:last-child {
+    display: none;
+  }
+
+  thead tr {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  table {
+    box-shadow: none;
+  }
+}
+/* --- Mode sombre : tableau des alertes --- */
+:host-context(body.dark-theme) table {
+  background: #1e293b;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+:host-context(body.dark-theme) td {
+  color: #e2e8f0;
+  border-bottom: 1px solid #334155;
+}
+
+:host-context(body.dark-theme) tr.low-stock {
+  background: rgba(220, 38, 38, 0.15);
+}
+
+:host-context(body.dark-theme) .empty-state {
+  color: #94a3b8;
+}

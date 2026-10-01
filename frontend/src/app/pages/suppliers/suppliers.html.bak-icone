@@ -1,0 +1,84 @@
+﻿<div class="suppliers-page">
+  <div class="page-header">
+    <h1>{{ 'suppliers.title' | translate }}</h1>
+    <div class="header-actions no-print">
+      <button class="btn-secondary" (click)="printPage()">🖨️ {{ 'common.print' | translate }}</button>
+      @if (canManage) {
+        <button class="btn-primary" (click)="openCreateForm()">{{ 'suppliers.newSupplier' | translate }}</button>
+      }
+    </div>
+  </div>
+
+  <div class="search-bar no-print">
+    <input type="text" [(ngModel)]="searchTerm" [placeholder]="'suppliers.searchPlaceholder' | translate">
+    @if (searchTerm) {
+      <button class="btn-clear" (click)="clearSearch()">✕ {{ 'common.clear' | translate }}</button>
+    }
+  </div>
+
+  @if (loading) {
+    <p>{{ 'common.loading' | translate }}</p>
+  }
+
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  @if (showForm) {
+    <div class="form-overlay no-print">
+      <div class="form-card">
+        <h2>{{ editingSupplier ? ('suppliers.formTitleEdit' | translate) : ('suppliers.formTitleNew' | translate) }}</h2>
+
+        <label>{{ 'products.name' | translate }}</label>
+        <input type="text" [(ngModel)]="formData.name" [placeholder]="'suppliers.namePlaceholder' | translate">
+
+        <label>{{ 'suppliers.emailLabel' | translate }}</label>
+        <input type="email" [(ngModel)]="formData.email" [placeholder]="'suppliers.emailLabel' | translate">
+
+        <label>{{ 'suppliers.phoneLabel' | translate }}</label>
+        <input type="text" [(ngModel)]="formData.phone" [placeholder]="'suppliers.phoneLabel' | translate">
+
+        <div class="form-actions">
+          <button class="btn-secondary" (click)="cancelForm()">{{ 'common.cancel' | translate }}</button>
+          <button class="btn-primary" (click)="saveSupplier()">{{ editingSupplier ? ('common.update' | translate) : ('common.save' | translate) }}</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (!loading && !error) {
+    @if (filteredSuppliers.length === 0) {
+      <p>{{ 'suppliers.notFound' | translate }}{{ searchTerm ? ' ' + ('common.forSearch' | translate) + ' "' + searchTerm + '"' : '' }}.</p>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            <th>{{ 'suppliers.colName' | translate }}</th>
+            <th>{{ 'suppliers.colEmail' | translate }}</th>
+            <th>{{ 'suppliers.colPhone' | translate }}</th>
+            <th>{{ 'suppliers.colProductCount' | translate }}</th>
+            @if (canManage) {
+              <th>{{ 'common.actions' | translate }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (supplier of filteredSuppliers; track supplier.id) {
+            <tr>
+              <td>{{ supplier.name }}</td>
+              <td>{{ supplier.email || '-' }}</td>
+              <td>{{ supplier.phone || '-' }}</td>
+              <td>{{ supplier.products?.length || 0 }}</td>
+              @if (canManage) {
+                <td class="actions">
+                  <button class="btn-edit" (click)="openEditForm(supplier)">✏️ {{ 'common.edit' | translate }}</button>
+                  <button class="btn-delete" (click)="deleteSupplier(supplier)">🗑️ {{ 'common.delete' | translate }}</button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+</div>

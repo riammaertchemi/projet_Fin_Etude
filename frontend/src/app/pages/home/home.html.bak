@@ -1,0 +1,77 @@
+﻿<div class="home-container">
+  <div class="dashboard-header">
+    
+    <h1>Tableau de bord</h1>
+    <p class="dashboard-date">{{ today }}</p>
+  </div>
+
+  @if (loading) {
+    <p>Chargement...</p>
+  } @else {
+    <div class="stats-grid">
+      <div class="stat-card products">
+        <a routerLink="/products" class="stat-card-link">
+          <div class="stat-icon">📦</div>
+          <div class="stat-value">{{ productCount }}</div>
+          <div class="stat-label">Produits</div>
+        </a>
+        <div class="stat-search">
+          <input
+            type="text"
+            placeholder="Rechercher un produit..."
+            [(ngModel)]="searchProducts"
+            (keyup.enter)="goToSearch('/products', searchProducts)">
+          <button (click)="goToSearch('/products', searchProducts)">🔍</button>
+        </div>
+      </div>
+
+      <div class="stat-card categories">
+        <a routerLink="/categories" class="stat-card-link">
+          <div class="stat-icon">🏷️</div>
+          <div class="stat-value">{{ categoryCount }}</div>
+          <div class="stat-label">Catégories</div>
+        </a>
+        <div class="stat-search">
+          <input
+            type="text"
+            placeholder="Rechercher une catégorie..."
+            [(ngModel)]="searchCategories"
+            (keyup.enter)="goToSearch('/categories', searchCategories)">
+          <button (click)="goToSearch('/categories', searchCategories)">🔍</button>
+        </div>
+      </div>
+
+      <div class="stat-card suppliers">
+        <a routerLink="/suppliers" class="stat-card-link">
+          <div class="stat-icon">🚚</div>
+          <div class="stat-value">{{ supplierCount }}</div>
+          <div class="stat-label">Fournisseurs</div>
+        </a>
+        <div class="stat-search">
+          <input
+            type="text"
+            placeholder="Rechercher un fournisseur..."
+            [(ngModel)]="searchSuppliers"
+            (keyup.enter)="goToSearch('/suppliers', searchSuppliers)">
+          <button (click)="goToSearch('/suppliers', searchSuppliers)">🔍</button>
+        </div>
+      </div>
+
+      <div class="stat-card alerts">
+        <a routerLink="/alerts" class="stat-card-link">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-value">{{ lowStockCount }}</div>
+          <div class="stat-label">Alertes stock faible</div>
+        </a>
+        <div class="stat-search">
+          <input
+            type="text"
+            placeholder="Rechercher..."
+            [(ngModel)]="searchAlerts"
+            (keyup.enter)="goToSearch('/alerts', searchAlerts)">
+          <button (click)="goToSearch('/alerts', searchAlerts)">🔍</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

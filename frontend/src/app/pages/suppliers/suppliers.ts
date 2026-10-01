@@ -1,0 +1,231 @@
+﻿import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { Supplier, SupplierService } from '../../services/supplier';
+import { ConfirmDialogService } from '../../services/confirm-dialog';
+import { Auth } from '../../services/auth';
+import { LangService } from '../../services/lang';
+import { TranslatePipe } from '../../pipes/translate';
+
+@Component({
+  selector: 'app-suppliers',
+  standalone: true,
+  imports: [CommonModule, FormsModule, TranslatePipe],
+  templateUrl: './suppliers.html',
+  styleUrl: './suppliers.css'
+})
+export class Suppliers implements OnInit {
+  suppliers: Supplier[] = [];
+  loading = true;
+  error = '';
+
+  searchTerm = '';
+
+  showForm = false;
+  editingSupplier: Supplier | null = null;
+  formData: Partial<Supplier> = this.emptyForm();
+
+  constructor(
+    private supplierService: SupplierService,
+    private confirmDialog: ConfirmDialogService,
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute,
+    public auth: Auth,
+    public lang: LangService
+  ) {}
+
+  get canManage(): boolean {
+    const role = this.auth.currentUser()?.role;
+    return role === 'ADMIN' || role === 'DIRECTEUR_GENERAL' || role === 'RESPONSABLE_LOGISTIQUE';
+  }
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      this.searchTerm = params['search'] || '';
+      this.cdr.detectChanges();
+    });
+    this.load();
+  }
+
+  get filteredSuppliers(): Supplier[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) return this.suppliers;
+    return this.suppliers.filter(s =>
+      s.name?.toLowerCase().includes(term) ||
+      s.email?.toLowerCase().includes(term) ||
+      s.phone?.toLowerCase().includes(term)
+    );
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+  }
+
+  printPage(): void {
+    window.print();
+  }
+
+  load(): void {
+    this.loading = true;
+    this.supplierService.getAll().subscribe({
+      next: (data) => {
+        this.suppliers = data;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.error = this.lang.t('suppliers.errorLoad');
+        this.loading = false;
+        this.cdr.detectChanges();
+        console.error(err);
+      }
+    });
+  }
+
+  emptyForm(): Partial<Supplier> {
+    return { name: '', email: '', phone: '' };
+  }
+
+  openCreateForm(): void {
+    this.editingSupplier = null;
+    this.formData = this.emptyForm();
+    this.showForm = true;
+  }
+
+  openEditForm(supplier: Supplier): void {
+    this.editingSupplier = supplier;
+    this.formData = {
+      name: supplier.name,
+      email: supplier.email,
+      phone: supplier.phone
+    };
+    this.showForm = true;
+  }
+
+  cancelForm(): void {
+    this.showForm = false;
+    this.editingSupplier = null;
+  }
+
+  saveSupplier(): void {
+    if (!this.formData.name?.trim()) return;
+
+    if (this.editingSupplier) {
+      this.supplierService.update(this.editingSupplier.id, this.formData).subscribe({
+        next: () => {
+          this.showForm = false;
+          this.editingSupplier = null;
+          this.load();
+        },
+        error: (err) => console.error(err)
+      });
+    } else {
+      this.supplierService.create(this.formData).subscribe({
+        next: () => {
+          this.showForm = false;
+          this.load();
+        },
+        error: (err) => console.error(err)
+      });
+    }
+  }
+
+  selectionMode = false;
+
+  toggleSelectionMode(): void {
+    this.selectionMode = !this.selectionMode;
+    if (!this.selectionMode) {
+      this.clearSelection();
+    }
+  }
+  selectedIds = new Set<number>();
+
+  isSelected(item: { id: number }): boolean {
+    return this.selectedIds.has(item.id);
+  }
+
+  toggleSelect(item: { id: number }): void {
+    if (this.selectedIds.has(item.id)) {
+      this.selectedIds.delete(item.id);
+    } else {
+      this.selectedIds.add(item.id);
+    }
+  }
+
+  get allSelected(): boolean {
+    return this.filteredSuppliers.length > 0 && this.filteredSuppliers.every((x: { id: number }) => this.selectedIds.has(x.id));
+  }
+
+  toggleSelectAll(): void {
+    if (this.allSelected) {
+      this.clearSelection();
+    } else {
+      this.filteredSuppliers.forEach((x: { id: number }) => this.selectedIds.add(x.id));
+    }
+  }
+
+  clearSelection(): void {
+    this.selectedIds.clear();
+  }
+
+  async deleteSelected(): Promise<void> {
+    if (this.selectedIds.size === 0) return;
+
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Confirmer la suppression',
+      message: 'Supprimer ' + this.selectedIds.size + ' element(s) selectionne(s) ? (Ils seront envoyes a la Corbeille, restaurables.)',
+      confirmText: this.lang.t('common.delete'),
+      cancelText: this.lang.t('common.cancel')
+    });
+
+    if (!confirmed) return;
+
+    const ids = Array.from(this.selectedIds);
+    let remaining = ids.length;
+    let hadError = false;
+
+    ids.forEach(id => {
+      this.supplierService.delete(id).subscribe({
+        next: () => {
+          remaining--;
+          if (remaining === 0) {
+            this.clearSelection();
+            this.load();
+            if (hadError) { alert('Certains elements n\'ont pas pu etre supprimes.'); }
+          }
+        },
+        error: (err: any) => {
+          console.error(err);
+          hadError = true;
+          remaining--;
+          if (remaining === 0) {
+            this.clearSelection();
+            this.load();
+            alert('Certains elements n\'ont pas pu etre supprimes.');
+          }
+        }
+      });
+    });
+  }
+  async deleteSupplier(supplier: Supplier): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: this.lang.t('suppliers.confirmDeleteTitle'),
+      message: this.lang.t('suppliers.confirmDeleteMsg', { name: supplier.name }),
+      confirmText: this.lang.t('common.delete'),
+      cancelText: this.lang.t('common.cancel')
+    });
+
+    if (!confirmed) return;
+
+    this.supplierService.delete(supplier.id).subscribe({
+      next: () => this.load(),
+      error: (err) => {
+        console.error(err);
+        alert(this.lang.t('categories.errorDeleteGeneric'));
+      }
+    });
+  }
+}
+
+

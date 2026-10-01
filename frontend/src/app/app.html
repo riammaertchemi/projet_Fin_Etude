@@ -1,0 +1,153 @@
+﻿@if (auth.isLoggedIn()) {
+  <nav class="navbar">
+    <div class="nav-left">
+      <a routerLink="/login" class="nav-brand">
+        <img src="/logo.png" alt="AlbideyNet" class="nav-logo">
+      </a>
+      <div class="nav-links">
+        <a routerLink="/home" routerLinkActive="active">{{ 'nav.home' | translate }}</a>
+        <a routerLink="/products" routerLinkActive="active">{{ 'nav.products' | translate }}</a>
+        <a routerLink="/categories" routerLinkActive="active">{{ 'nav.categories' | translate }}</a>
+        <a routerLink="/suppliers" routerLinkActive="active">{{ 'nav.suppliers' | translate }}</a>
+        <a routerLink="/stock-movements" routerLinkActive="active">{{ 'nav.movements' | translate }}</a>
+        <a routerLink="/alerts" routerLinkActive="active">{{ 'nav.alerts' | translate }}</a>
+        @if (canAccessTrash) {
+        <a routerLink="/trash" routerLinkActive="active">🗑️ {{ 'nav.trash' | translate }}</a>
+        }
+        <button type="button" class="nav-about-btn" (click)="openAbout()">{{ 'nav.about' | translate }}</button>
+      </div>
+    </div>
+    <div class="nav-user">
+      <div class="lang-menu no-print">
+        <button class="lang-trigger" (click)="toggleLangMenu()">
+          <span class="lang-avatar">{{ lang.lang().toUpperCase() }}</span>
+          <span class="lang-name">{{ langLabel }}</span>
+          <svg class="chevron" [class.open]="langMenuOpen()" width="10" height="6" viewBox="0 0 10 6" fill="none">
+            <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        @if (langMenuOpen()) {
+          <div class="lang-dropdown">
+            <button class="lang-item" [class.active]="lang.lang() === 'fr'" (click)="setLang('fr')">
+              <span class="lang-item-avatar">FR</span>
+              <span>Français</span>
+            </button>
+            <button class="lang-item" [class.active]="lang.lang() === 'en'" (click)="setLang('en')">
+              <span class="lang-item-avatar">EN</span>
+              <span>English</span>
+            </button>
+            <button class="lang-item" [class.active]="lang.lang() === 'ar'" (click)="setLang('ar')">
+              <span class="lang-item-avatar">AR</span>
+              <span>العربية</span>
+            </button>
+          </div>
+        }
+      </div>
+
+      <label class="theme-toggle">
+        <input type="checkbox" [checked]="theme.isDark()" (change)="theme.toggle()">
+        <span class="toggle-track">
+          <span class="toggle-icon">🌙</span>
+          <span class="toggle-thumb"></span>
+          <span class="toggle-icon">☀️</span>
+        </span>
+      </label>
+ 
+      <div class="profile-menu">
+        <button class="profile-trigger" (click)="toggleProfileMenu()">
+          <span class="avatar">
+            {{ initials }}
+            <span class="status-dot"></span>
+          </span>
+          <span class="profile-name">{{ auth.currentUser()?.name }}</span>
+          <svg class="chevron" [class.open]="profileMenuOpen()" width="10" height="6" viewBox="0 0 10 6" fill="none">
+            <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+ 
+        @if (profileMenuOpen()) {
+          <div class="profile-dropdown">
+            <div class="profile-dropdown-header">
+              <span class="avatar avatar-lg">
+                {{ initials }}
+                <span class="status-dot status-dot-lg"></span>
+              </span>
+              <div class="profile-dropdown-info">
+                <strong>{{ auth.currentUser()?.name }}</strong>
+                <small>{{ auth.currentUser()?.email }}</small>
+              </div>
+            </div>
+ 
+            <div class="profile-dropdown-role">
+              <span class="role-badge" [class]="roleClass">
+                <span class="role-icon">{{ roleIcon }}</span>
+                {{ roleLabel }}
+              </span>
+            </div>
+ 
+            <div class="profile-dropdown-divider"></div>
+ 
+            <a routerLink="/profile" class="menu-item" (click)="closeProfileMenu()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <span>{{ 'profile.myProfile' | translate }}</span>
+            </a>
+ 
+            <button class="menu-item menu-item-danger" (click)="logout()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+              <span>{{ 'profile.logout' | translate }}</span>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </nav>
+}
+ 
+<main class="page-content">
+  <router-outlet></router-outlet>
+</main>
+ 
+@if (confirmDialog.isOpen()) {
+  <div class="confirm-overlay">
+    <div class="confirm-card">
+      <div class="confirm-icon">🗑️</div>
+      <h3 class="confirm-title">{{ confirmDialog.title() }}</h3>
+      <p class="confirm-message">{{ confirmDialog.message() }}</p>
+      <div class="confirm-actions">
+        <button type="button" class="btn-secondary" (click)="confirmDialog.onCancel()">{{ confirmDialog.cancelText() }}</button>
+        <button type="button" class="btn-confirm-delete" (click)="confirmDialog.onConfirm()">{{ confirmDialog.confirmText() }}</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (aboutOpen()) {
+  <div class="about-overlay" (click)="closeAbout()">
+    <div class="about-card" (click)="$event.stopPropagation()">
+      <button type="button" class="about-close-btn" (click)="closeAbout()" aria-label="Fermer">✕</button>
+      <div class="about-logo">
+        <img src="/logo.png" alt="AlbideyNet">
+      </div>
+      <h2 class="about-app-name">{{ 'about.appName' | translate }}</h2>
+      <p class="about-sector">{{ 'about.sector' | translate }}</p>
+      <p class="about-location">📍 {{ 'about.location' | translate }}</p>
+      <p class="about-description">{{ 'about.description' | translate }}</p>
+      <p class="about-slogan">{{ 'about.slogan' | translate }}</p>
+      <p class="about-phone">{{ 'about.phone' | translate }}</p>
+      <p class="about-version">{{ 'about.version' | translate }}</p>
+      <button type="button" class="btn-secondary about-close-action" (click)="closeAbout()">{{ 'about.close' | translate }}</button>
+    </div>
+  </div>
+}
+
+
+
+

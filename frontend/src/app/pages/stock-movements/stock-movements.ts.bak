@@ -1,0 +1,185 @@
+﻿import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { StockMovement, StockMovementService } from '../../services/stock-movement';
+import { Product, ProductService } from '../../services/product';
+import { ConfirmDialogService } from '../../services/confirm-dialog';
+
+@Component({
+  selector: 'app-stock-movements',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './stock-movements.html',
+  styleUrl: './stock-movements.css'
+})
+export class StockMovements implements OnInit {
+  movements: StockMovement[] = [];
+  products: Product[] = [];
+  loading = true;
+  error = '';
+
+  searchTerm = '';
+
+  showForm = false;
+  editingMovement: StockMovement | null = null;
+  formData: { productId: number | null; type: string; quantity: number; reason: string; date: string } = this.emptyForm();
+  saveError = '';
+
+  constructor(
+    private stockMovementService: StockMovementService,
+    private productService: ProductService,
+    private confirmDialog: ConfirmDialogService,
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute
+  ) {}
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      this.searchTerm = params['search'] || '';
+      this.cdr.detectChanges();
+    });
+    this.load();
+    this.loadProducts();
+  }
+
+  get filteredMovements(): StockMovement[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) return this.movements;
+    return this.movements.filter(m =>
+      m.product?.name?.toLowerCase().includes(term) ||
+      m.type?.toLowerCase().includes(term) ||
+      m.reason?.toLowerCase().includes(term)
+    );
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+  }
+
+  printPage(): void {
+    window.print();
+  }
+
+  load(): void {
+    this.loading = true;
+    this.stockMovementService.getAll().subscribe({
+      next: (data) => {
+        this.movements = data;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.error = 'Erreur lors du chargement des mouvements de stock';
+        this.loading = false;
+        this.cdr.detectChanges();
+        console.error(err);
+      }
+    });
+  }
+
+  loadProducts(): void {
+    this.productService.getAll().subscribe({
+      next: (data) => {
+        this.products = data;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error(err)
+    });
+  }
+
+  toInputDate(iso: string): string {
+    const d = new Date(iso);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  nowForInput(): string {
+    return this.toInputDate(new Date().toISOString());
+  }
+
+  emptyForm() {
+    return {
+      productId: null as number | null,
+      type: 'ENTREE',
+      quantity: 0,
+      reason: '',
+      date: this.nowForInput()
+    };
+  }
+
+  openCreateForm(): void {
+    this.editingMovement = null;
+    this.formData = this.emptyForm();
+    this.saveError = '';
+    this.showForm = true;
+  }
+
+  openEditForm(movement: StockMovement): void {
+    this.editingMovement = movement;
+    this.formData = {
+      productId: movement.productId,
+      type: movement.type,
+      quantity: movement.quantity,
+      reason: movement.reason || '',
+      date: this.toInputDate(movement.createdAt)
+    };
+    this.saveError = '';
+    this.showForm = true;
+  }
+
+  cancelForm(): void {
+    this.showForm = false;
+    this.editingMovement = null;
+  }
+
+  saveMovement(): void {
+    if (!this.formData.productId || !this.formData.quantity || this.formData.quantity <= 0) {
+      this.saveError = 'Sélectionnez un produit et une quantité valide.';
+      return;
+    }
+
+    const payload = {
+      productId: this.formData.productId,
+      type: this.formData.type,
+      quantity: this.formData.quantity,
+      reason: this.formData.reason,
+      date: this.formData.date
+    };
+
+    const request = this.editingMovement
+      ? this.stockMovementService.update(this.editingMovement.id, payload)
+      : this.stockMovementService.create(payload);
+
+    request.subscribe({
+      next: () => {
+        this.showForm = false;
+        this.editingMovement = null;
+        this.load();
+      },
+      error: (err) => {
+        this.saveError = err?.error?.error || "Erreur lors de l'enregistrement du mouvement.";
+        console.error(err);
+      }
+    });
+  }
+
+  async deleteMovement(movement: StockMovement): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Supprimer ce mouvement ?',
+      message: `Voulez-vous vraiment supprimer ce mouvement (${movement.type} ${movement.quantity}) ? Le stock du produit sera ajusté en conséquence.`,
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler'
+    });
+
+    if (!confirmed) return;
+
+    this.stockMovementService.delete(movement.id).subscribe({
+      next: () => this.load(),
+      error: (err) => {
+        alert(err?.error?.error || 'Erreur lors de la suppression du mouvement.');
+        console.error(err);
+      }
+    });
+  }
+}

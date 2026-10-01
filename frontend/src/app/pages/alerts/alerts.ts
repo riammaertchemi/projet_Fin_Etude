@@ -1,0 +1,63 @@
+﻿import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { ProductService, Product } from '../../services/product';
+import { TranslatePipe } from '../../pipes/translate';
+
+@Component({
+  selector: 'app-alerts',
+  standalone: true,
+  imports: [CommonModule, FormsModule, TranslatePipe],
+  templateUrl: './alerts.html',
+  styleUrl: './alerts.css'
+})
+export class Alerts implements OnInit {
+  products: Product[] = [];
+  searchTerm: string = '';
+
+  constructor(
+    private productService: ProductService,
+    private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      if (params['search']) {
+        this.searchTerm = params['search'];
+      }
+    });
+    this.loadLowStockProducts();
+  }
+
+  loadLowStockProducts(): void {
+    this.productService.getLowStock().subscribe({
+      next: (data) => {
+        this.products = data;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Erreur lors du chargement des alertes', err);
+      }
+    });
+  }
+
+  get filteredProducts(): Product[] {
+    if (!this.searchTerm) return this.products;
+    const term = this.searchTerm.toLowerCase();
+    return this.products.filter(p =>
+      p.name.toLowerCase().includes(term) ||
+      p.sku.toLowerCase().includes(term) ||
+      (p.category?.name?.toLowerCase().includes(term) ?? false)
+    );
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+  }
+
+  printPage(): void {
+    window.print();
+  }
+}

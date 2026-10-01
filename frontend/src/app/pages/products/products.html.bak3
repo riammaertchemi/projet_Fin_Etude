@@ -1,0 +1,131 @@
+﻿<div class="products-page">
+  <div class="page-header">
+    <h1>Produits</h1>
+    <div class="header-actions no-print">
+      <button class="btn-secondary" (click)="printPage()">🖨️ Imprimer</button>
+      @if (canManage) {
+        <button class="btn-primary" (click)="openCreateForm()">+ Nouveau produit</button>
+      }
+    </div>
+  </div>
+
+  <div class="search-bar no-print">
+    <input type="text" [(ngModel)]="searchTerm" placeholder="Rechercher un produit (nom, SKU, catégorie)...">
+    @if (searchTerm) {
+      <button class="btn-clear" (click)="clearSearch()">✕ Effacer</button>
+    }
+  </div>
+
+  @if (loading) {
+    <p>Chargement...</p>
+  }
+
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  @if (showForm) {
+    <div class="form-overlay no-print">
+      <div class="form-card">
+        <h2>{{ editingProduct ? 'Modifier le produit' : 'Nouveau produit' }}</h2>
+
+        @if (saveError) {
+          <p class="error">{{ saveError }}</p>
+        }
+
+        <label>Nom</label>
+        <input type="text" [(ngModel)]="formData.name" placeholder="Nom du produit">
+
+        <label>SKU</label>
+        <input type="text" [(ngModel)]="formData.sku" placeholder="Référence">
+
+        <label>Description</label>
+        <textarea [(ngModel)]="formData.description" placeholder="Description"></textarea>
+
+        <label>Image du produit</label>
+        <input type="file" accept="image/*" (change)="onImageSelected($event)">
+        @if (formData.imageUrl) {
+          <div class="image-preview">
+            <img [src]="formData.imageUrl" alt="Aperçu">
+            <button type="button" class="btn-clear" (click)="removeImage()">✕ Retirer l'image</button>
+          </div>
+        }
+
+        <label>Prix (FCFA)</label>
+        <input type="number" [(ngModel)]="formData.price">
+
+        <label>Quantité</label>
+        <input type="number" [(ngModel)]="formData.quantity">
+
+        <label>Seuil minimum</label>
+        <input type="number" [(ngModel)]="formData.minQuantity">
+
+        <label>Catégorie</label>
+        <select [(ngModel)]="formData.categoryId">
+          <option [ngValue]="null">-- Aucune --</option>
+          @for (category of categories; track category.id) {
+            <option [ngValue]="category.id">{{ category.name }}</option>
+          }
+        </select>
+
+        <label>Fournisseur</label>
+        <select [(ngModel)]="formData.supplierId">
+          <option [ngValue]="null">-- Aucun --</option>
+          @for (supplier of suppliers; track supplier.id) {
+            <option [ngValue]="supplier.id">{{ supplier.name }}</option>
+          }
+        </select>
+
+        <div class="form-actions">
+          <button class="btn-secondary" (click)="cancelForm()">Annuler</button>
+          <button class="btn-primary" (click)="saveProduct()">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (!loading && !error) {
+    @if (filteredProducts.length === 0) {
+      <p>Aucun produit trouvé{{ searchTerm ? ' pour "' + searchTerm + '"' : '' }}.</p>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            <th>Image</th>
+            <th>Nom</th>
+            <th>SKU</th>
+            <th>Prix</th>
+            <th>Quantité</th>
+            <th>Catégorie</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (product of filteredProducts; track product.id) {
+            <tr [class.low-stock]="product.quantity < product.minQuantity">
+              <td>
+                @if (product.imageUrl) {
+                  <img [src]="product.imageUrl" alt="{{ product.name }}" class="product-thumb">
+                } @else {
+                  <div class="product-thumb-placeholder">📦</div>
+                }
+              </td>
+              <td>{{ product.name }}</td>
+              <td>{{ product.sku }}</td>
+              <td>{{ formatPrice(product.price) }}</td>
+              <td>{{ product.quantity }}</td>
+              <td>{{ product.category?.name || '-' }}</td>
+              <td class="actions">
+                @if (canManage) {
+                  <button class="btn-edit" (click)="openEditForm(product)">Modifier</button>
+                  <button class="btn-delete" (click)="deleteProduct(product)">Supprimer</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+</div>
+

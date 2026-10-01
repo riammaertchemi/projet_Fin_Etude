@@ -1,0 +1,238 @@
+﻿.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(rgba(10, 20, 40, 0.2), rgba(10, 20, 40, 0.2)), url('/login-background.jpg') 75% center / cover no-repeat;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.login-card {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  max-width: 380px;
+  margin-right: 8%;
+}
+
+.login-logo {
+  display: block;
+  margin: 0 auto 8px;
+  max-width: 220px;
+  width: 100%;
+  height: auto;
+}
+
+.subtitle {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 28px;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.6);
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.6);
+}
+
+.input-with-icon {
+  position: relative;
+}
+
+.input-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  color: #6b7280;
+  pointer-events: none;
+}
+
+input {
+  width: 100%;
+  padding: 12px 14px 12px 40px;
+  background-color: #EAF0FE;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  color: #1e293b;
+  box-sizing: border-box;
+}
+
+#password {
+  padding-right: 42px;
+}
+
+input::placeholder {
+  color: #94a3b8;
+}
+
+input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.18);
+}
+
+.toggle-password {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: auto;
+  padding: 6px;
+  margin-top: 0;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.toggle-password:hover {
+  color: #4f46e5;
+  background: rgba(79, 70, 229, 0.08);
+}
+
+button[type="submit"] {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.2s ease;
+}
+
+button[type="submit"]:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+button[type="submit"]:disabled {
+  background: #a5a5f5;
+  cursor: not-allowed;
+}
+
+.btn-icon {
+  display: flex;
+  align-items: center;
+}
+
+.error {
+  color: #dc2626;
+  font-size: 14px;
+  margin: 8px 0;
+}
+
+.login-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 4px 0 4px;
+  flex-wrap: wrap;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f2937;
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.7);
+}
+
+.remember-me input[type="checkbox"] {
+  width: auto;
+  padding: 0;
+  accent-color: #4f46e5;
+  cursor: pointer;
+}
+
+.forgot-password-link {
+  font-size: 13px;
+  color: #3730a3;
+  text-decoration: none;
+  font-weight: 700;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.7);
+}
+
+.forgot-password-link:hover {
+  text-decoration: underline;
+}
+
+.signup-hint {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+  margin: 16px 0 0;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.7);
+}
+
+.signup-hint a {
+  color: #3730a3;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.signup-hint a:hover {
+  text-decoration: underline;
+}
+
+:host-context(body.dark-theme) .remember-me {
+  color: #cbd5e1;
+}
+
+:host-context(body.dark-theme) .signup-hint {
+  color: #94a3b8;
+}
+
+:host-context(body.dark-theme) input {
+  background-color: #1e2740;
+  color: #f1f5f9;
+}
+
+:host-context(body.dark-theme) input::placeholder {
+  color: #64748b;
+}
+
+:host-context(body.dark-theme) label {
+  color: #cbd5e1;
+}
+
+:host-context(body.dark-theme) .login-card {
+  background: rgba(17, 24, 39, 0.5);
+}
+
+:host-context(body.dark-theme) .subtitle {
+  color: #94a3b8;
+}

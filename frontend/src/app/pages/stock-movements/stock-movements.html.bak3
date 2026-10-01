@@ -1,0 +1,103 @@
+﻿<div class="stock-movements-page">
+  <div class="page-header">
+    <h1>Mouvements de stock</h1>
+    <div class="header-actions no-print">
+      <button class="btn-secondary" (click)="printPage()">🖨️ Imprimer</button>
+      @if (canManage) {
+        <button class="btn-primary" (click)="openCreateForm()">+ Nouveau mouvement</button>
+      }
+    </div>
+  </div>
+
+  <div class="search-bar no-print">
+    <input type="text" [(ngModel)]="searchTerm" placeholder="Rechercher (produit, type, raison)...">
+    @if (searchTerm) {
+      <button class="btn-clear" (click)="clearSearch()">✕ Effacer</button>
+    }
+  </div>
+
+  @if (loading) {
+    <p>Chargement...</p>
+  }
+
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  @if (showForm) {
+    <div class="form-overlay no-print">
+      <div class="form-card">
+        <h2>{{ editingMovement ? 'Modifier le mouvement' : 'Nouveau mouvement' }}</h2>
+
+        @if (saveError) {
+          <p class="error">{{ saveError }}</p>
+        }
+
+        <label>Date</label>
+        <input type="datetime-local" [(ngModel)]="formData.date">
+
+        <label>Produit</label>
+        <select [(ngModel)]="formData.productId">
+          <option [ngValue]="null">-- Choisir un produit --</option>
+          @for (product of products; track product.id) {
+            <option [ngValue]="product.id">{{ product.name }}</option>
+          }
+        </select>
+
+        <label>Type</label>
+        <select [(ngModel)]="formData.type">
+          <option value="ENTREE">Entrée</option>
+          <option value="SORTIE">Sortie</option>
+        </select>
+
+        <label>Quantité</label>
+        <input type="number" [(ngModel)]="formData.quantity" min="1">
+
+        <label>Raison</label>
+        <input type="text" [(ngModel)]="formData.reason" placeholder="Raison (optionnel)">
+
+        <div class="form-actions">
+          <button class="btn-secondary" (click)="cancelForm()">Annuler</button>
+          <button class="btn-primary" (click)="saveMovement()">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (!loading && !error) {
+    @if (filteredMovements.length === 0) {
+      <p>Aucun mouvement trouvé{{ searchTerm ? ' pour "' + searchTerm + '"' : '' }}.</p>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Produit</th>
+            <th>Type</th>
+            <th>Quantité</th>
+            <th>Raison</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (movement of filteredMovements; track movement.id) {
+            <tr>
+              <td>{{ movement.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>{{ movement.product?.name || '-' }}</td>
+              <td>{{ movement.type }}</td>
+              <td>{{ movement.quantity }}</td>
+              <td>{{ movement.reason || '-' }}</td>
+              <td class="actions">
+                @if (canManage) {
+                  <button class="btn-edit" (click)="openEditForm(movement)">Modifier</button>
+                  <button class="btn-delete" (click)="deleteMovement(movement)">Supprimer</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+</div>
+

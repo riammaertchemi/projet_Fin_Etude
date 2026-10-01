@@ -1,0 +1,1201 @@
+===== C:\Users\HP\albideynet-frontend\src\app\pages\products\products.ts =====
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { Product, ProductService } from '../../services/product';
+import { Category, CategoryService } from '../../services/category';
+import { Supplier, SupplierService } from '../../services/supplier';
+
+@Component({
+  selector: 'app-products',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './products.html',
+  styleUrl: './products.css'
+})
+export class Products implements OnInit {
+  products: Product[] = [];
+  categories: Category[] = [];
+  suppliers: Supplier[] = [];
+  loading = true;
+  error = '';
+  saveError = '';
+
+  searchTerm = '';
+
+  showForm = false;
+  editingProduct: Product | null = null;
+  formData: Partial<Product> = this.emptyForm();
+
+  constructor(
+    private productService: ProductService,
+    private categoryService: CategoryService,
+    private supplierService: SupplierService,
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute
+  ) {}
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      this.searchTerm = params['search'] || '';
+      this.cdr.detectChanges();
+    });
+    this.load();
+    this.loadCategories();
+    this.loadSuppliers();
+  }
+
+  get filteredProducts(): Product[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) return this.products;
+    return this.products.filter(p =>
+      p.name?.toLowerCase().includes(term) ||
+      p.sku?.toLowerCase().includes(term) ||
+      p.description?.toLowerCase().includes(term) ||
+      p.category?.name?.toLowerCase().includes(term)
+    );
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+  }
+
+  printPage(): void {
+    window.print();
+  }
+
+  load(): void {
+    this.loading = true;
+    this.productService.getAll().subscribe({
+      next: (data) => {
+        this.products = data;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.error = 'Erreur lors du chargement des produits';
+        this.loading = false;
+        this.cdr.detectChanges();
+        console.error(err);
+      }
+    });
+  }
+
+  loadCategories(): void {
+    this.categoryService.getAll().subscribe({
+      next: (data) => {
+        this.categories = data;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error(err)
+    });
+  }
+
+  loadSuppliers(): void {
+    this.supplierService.getAll().subscribe({
+      next: (data) => {
+        this.suppliers = data;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error(err)
+    });
+  }
+
+  emptyForm(): Partial<Product> {
+    return {
+      name: '', sku: '', description: '', price: 0, quantity: 0, minQuantity: 5,
+      categoryId: null, supplierId: null, imageUrl: null
+    };
+  }
+
+  openCreateForm(): void {
+    this.editingProduct = null;
+    this.formData = this.emptyForm();
+    this.saveError = '';
+    this.showForm = true;
+  }
+
+  openEditForm(product: Product): void {
+    this.editingProduct = product;
+    this.formData = {
+      name: product.name,
+      sku: product.sku,
+      description: product.description,
+      price: product.price,
+      quantity: product.quantity,
+      minQuantity: product.minQuantity,
+      categoryId: product.categoryId,
+      supplierId: product.supplierId,
+      imageUrl: product.imageUrl || null
+    };
+    this.saveError = '';
+    this.showForm = true;
+  }
+
+  cancelForm(): void {
+    this.showForm = false;
+    this.editingProduct = null;
+  }
+
+  onImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files && input.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.saveError = 'Le fichier doit être une image.';
+      return;
+    }
+
+    if (file.size > 3 * 1024 * 1024) {
+      this.saveError = "L'image est trop grande (3 Mo maximum).";
+      return;
+    }
+
+    this.saveError = '';
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.formData.imageUrl = reader.result as string;
+      this.cdr.detectChanges();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  removeImage(): void {
+    this.formData.imageUrl = null;
+  }
+
+  saveProduct(): void {
+    this.saveError = '';
+
+    if (this.editingProduct) {
+      this.productService.update(this.editingProduct.id, this.formData).subscribe({
+        next: () => {
+          this.showForm = false;
+          this.load();
+        },
+        error: (err) => {
+          this.saveError = err?.error?.error || 'Erreur lors de la mise à jour du produit.';
+          console.error(err);
+        }
+      });
+    } else {
+      this.productService.create(this.formData).subscribe({
+        next: () => {
+          this.showForm = false;
+          this.load();
+        },
+        error: (err) => {
+          this.saveError = err?.error?.error || 'Erreur lors de la création du produit.';
+          console.error(err);
+        }
+      });
+    }
+  }
+
+  deleteProduct(product: Product): void {
+    if (confirm(`Supprimer le produit "${product.name}" ?`)) {
+      this.productService.delete(product.id).subscribe({
+        next: () => this.load(),
+        error: (err) => console.error(err)
+      });
+    }
+  }
+
+  formatPrice(price: number | undefined | null): string {
+    if (price === undefined || price === null) return '0 FCFA';
+    return Math.round(price).toLocaleString('fr-FR') + ' FCFA';
+  }
+}
+
+
+===== C:\Users\HP\albideynet-frontend\src\app\pages\categories\categories.ts =====
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { Category, CategoryService } from '../../services/category';
+
+@Component({
+  selector: 'app-categories',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './categories.html',
+  styleUrl: './categories.css'
+})
+export class Categories implements OnInit {
+  categories: Category[] = [];
+  loading = true;
+  error = '';
+
+  searchTerm = '';
+
+  showForm = false;
+  newCategoryName = '';
+  editingCategory: Category | null = null;
+
+  constructor(
+    private categoryService: CategoryService,
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute
+  ) {}
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      this.searchTerm = params['search'] || '';
+      this.cdr.detectChanges();
+    });
+    this.load();
+  }
+
+  get filteredCategories(): Category[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) return this.categories;
+    return this.categories.filter(c => c.name?.toLowerCase().includes(term));
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+  }
+
+  printPage(): void {
+    window.print();
+  }
+
+  load(): void {
+    this.loading = true;
+    this.categoryService.getAll().subscribe({
+      next: (data) => {
+        this.categories = data;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.error = 'Erreur lors du chargement des catégories';
+        this.loading = false;
+        this.cdr.detectChanges();
+        console.error(err);
+      }
+    });
+  }
+
+  openCreateForm(): void {
+    this.editingCategory = null;
+    this.newCategoryName = '';
+    this.showForm = true;
+  }
+
+  openEditForm(category: Category): void {
+    this.editingCategory = category;
+    this.newCategoryName = category.name;
+    this.showForm = true;
+  }
+
+  cancelForm(): void {
+    this.showForm = false;
+    this.editingCategory = null;
+  }
+
+  saveCategory(): void {
+    if (!this.newCategoryName.trim()) return;
+
+    if (this.editingCategory) {
+      this.categoryService.update(this.editingCategory.id, { name: this.newCategoryName }).subscribe({
+        next: () => {
+          this.showForm = false;
+          this.editingCategory = null;
+          this.load();
+        },
+        error: (err) => console.error(err)
+      });
+    } else {
+      this.categoryService.create({ name: this.newCategoryName }).subscribe({
+        next: () => {
+          this.showForm = false;
+          this.load();
+        },
+        error: (err) => console.error(err)
+      });
+    }
+  }
+
+  deleteCategory(category: Category): void {
+    if (confirm(`Supprimer la catégorie "${category.name}" ?`)) {
+      this.categoryService.delete(category.id).subscribe({
+        next: () => this.load(),
+        error: (err) => {
+          console.error(err);
+          alert('Erreur lors de la suppression (vérifiez le backend).');
+        }
+      });
+    }
+  }
+}
+
+
+===== C:\Users\HP\albideynet-frontend\src\app\pages\suppliers\suppliers.ts =====
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { Supplier, SupplierService } from '../../services/supplier';
+
+@Component({
+  selector: 'app-suppliers',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './suppliers.html',
+  styleUrl: './suppliers.css'
+})
+export class Suppliers implements OnInit {
+  suppliers: Supplier[] = [];
+  loading = true;
+  error = '';
+
+  searchTerm = '';
+
+  showForm = false;
+  editingSupplier: Supplier | null = null;
+  formData: Partial<Supplier> = this.emptyForm();
+
+  constructor(
+    private supplierService: SupplierService,
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute
+  ) {}
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      this.searchTerm = params['search'] || '';
+      this.cdr.detectChanges();
+    });
+    this.load();
+  }
+
+  get filteredSuppliers(): Supplier[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) return this.suppliers;
+    return this.suppliers.filter(s =>
+      s.name?.toLowerCase().includes(term) ||
+      s.email?.toLowerCase().includes(term) ||
+      s.phone?.toLowerCase().includes(term)
+    );
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+  }
+
+  printPage(): void {
+    window.print();
+  }
+
+  load(): void {
+    this.loading = true;
+    this.supplierService.getAll().subscribe({
+      next: (data) => {
+        this.suppliers = data;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.error = 'Erreur lors du chargement des fournisseurs';
+        this.loading = false;
+        this.cdr.detectChanges();
+        console.error(err);
+      }
+    });
+  }
+
+  emptyForm(): Partial<Supplier> {
+    return { name: '', email: '', phone: '' };
+  }
+
+  openCreateForm(): void {
+    this.editingSupplier = null;
+    this.formData = this.emptyForm();
+    this.showForm = true;
+  }
+
+  openEditForm(supplier: Supplier): void {
+    this.editingSupplier = supplier;
+    this.formData = {
+      name: supplier.name,
+      email: supplier.email,
+      phone: supplier.phone
+    };
+    this.showForm = true;
+  }
+
+  cancelForm(): void {
+    this.showForm = false;
+    this.editingSupplier = null;
+  }
+
+  saveSupplier(): void {
+    if (!this.formData.name?.trim()) return;
+
+    if (this.editingSupplier) {
+      this.supplierService.update(this.editingSupplier.id, this.formData).subscribe({
+        next: () => {
+          this.showForm = false;
+          this.editingSupplier = null;
+          this.load();
+        },
+        error: (err) => console.error(err)
+      });
+    } else {
+      this.supplierService.create(this.formData).subscribe({
+        next: () => {
+          this.showForm = false;
+          this.load();
+        },
+        error: (err) => console.error(err)
+      });
+    }
+  }
+
+  deleteSupplier(supplier: Supplier): void {
+    if (confirm(`Supprimer le fournisseur "${supplier.name}" ?`)) {
+      this.supplierService.delete(supplier.id).subscribe({
+        next: () => this.load(),
+        error: (err) => {
+          console.error(err);
+          alert('Erreur lors de la suppression (vérifiez le backend).');
+        }
+      });
+    }
+  }
+}
+
+
+===== C:\Users\HP\albideynet-frontend\src\app\pages\stock-movements\stock-movements.ts =====
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { StockMovement, StockMovementService } from '../../services/stock-movement';
+import { Product, ProductService } from '../../services/product';
+
+@Component({
+  selector: 'app-stock-movements',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './stock-movements.html',
+  styleUrl: './stock-movements.css'
+})
+export class StockMovements implements OnInit {
+  movements: StockMovement[] = [];
+  products: Product[] = [];
+  loading = true;
+  error = '';
+
+  searchTerm = '';
+
+  showForm = false;
+  editingMovement: StockMovement | null = null;
+  formData: { productId: number | null; type: string; quantity: number; reason: string; date: string } = this.emptyForm();
+  saveError = '';
+
+  constructor(
+    private stockMovementService: StockMovementService,
+    private productService: ProductService,
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute
+  ) {}
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      this.searchTerm = params['search'] || '';
+      this.cdr.detectChanges();
+    });
+    this.load();
+    this.loadProducts();
+  }
+
+  get filteredMovements(): StockMovement[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) return this.movements;
+    return this.movements.filter(m =>
+      m.product?.name?.toLowerCase().includes(term) ||
+      m.type?.toLowerCase().includes(term) ||
+      m.reason?.toLowerCase().includes(term)
+    );
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+  }
+
+  printPage(): void {
+    window.print();
+  }
+
+  load(): void {
+    this.loading = true;
+    this.stockMovementService.getAll().subscribe({
+      next: (data) => {
+        this.movements = data;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.error = 'Erreur lors du chargement des mouvements de stock';
+        this.loading = false;
+        this.cdr.detectChanges();
+        console.error(err);
+      }
+    });
+  }
+
+  loadProducts(): void {
+    this.productService.getAll().subscribe({
+      next: (data) => {
+        this.products = data;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error(err)
+    });
+  }
+
+  toInputDate(iso: string): string {
+    const d = new Date(iso);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  nowForInput(): string {
+    return this.toInputDate(new Date().toISOString());
+  }
+
+  emptyForm() {
+    return {
+      productId: null as number | null,
+      type: 'ENTREE',
+      quantity: 0,
+      reason: '',
+      date: this.nowForInput()
+    };
+  }
+
+  openCreateForm(): void {
+    this.editingMovement = null;
+    this.formData = this.emptyForm();
+    this.saveError = '';
+    this.showForm = true;
+  }
+
+  openEditForm(movement: StockMovement): void {
+    this.editingMovement = movement;
+    this.formData = {
+      productId: movement.productId,
+      type: movement.type,
+      quantity: movement.quantity,
+      reason: movement.reason || '',
+      date: this.toInputDate(movement.createdAt)
+    };
+    this.saveError = '';
+    this.showForm = true;
+  }
+
+  cancelForm(): void {
+    this.showForm = false;
+    this.editingMovement = null;
+  }
+
+  saveMovement(): void {
+    if (!this.formData.productId || !this.formData.quantity || this.formData.quantity <= 0) {
+      this.saveError = 'Sélectionnez un produit et une quantité valide.';
+      return;
+    }
+
+    const payload = {
+      productId: this.formData.productId,
+      type: this.formData.type,
+      quantity: this.formData.quantity,
+      reason: this.formData.reason,
+      date: this.formData.date
+    };
+
+    const request = this.editingMovement
+      ? this.stockMovementService.update(this.editingMovement.id, payload)
+      : this.stockMovementService.create(payload);
+
+    request.subscribe({
+      next: () => {
+        this.showForm = false;
+        this.editingMovement = null;
+        this.load();
+      },
+      error: (err) => {
+        this.saveError = err?.error?.error || "Erreur lors de l'enregistrement du mouvement.";
+        console.error(err);
+      }
+    });
+  }
+
+  deleteMovement(movement: StockMovement): void {
+    if (confirm(`Supprimer ce mouvement (${movement.type} ${movement.quantity}) ? Le stock du produit sera ajusté en conséquence.`)) {
+      this.stockMovementService.delete(movement.id).subscribe({
+        next: () => this.load(),
+        error: (err) => {
+          alert(err?.error?.error || 'Erreur lors de la suppression du mouvement.');
+          console.error(err);
+        }
+      });
+    }
+  }
+}
+
+
+===== C:\Users\HP\albideynet-frontend\src\app\app.ts =====
+import { Component, ElementRef, HostListener, signal } from '@angular/core';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { Auth } from './services/auth';
+import { ThemeService } from './services/theme';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
+  templateUrl: './app.html',
+  styleUrl: './app.css'
+})
+export class App {
+  profileMenuOpen = signal(false);
+
+  private roleLabels: Record<string, string> = {
+    ADMIN: 'Administrateur',
+    MANAGER: 'Responsable de Stock',
+    EMPLOYE: 'Employé'
+  };
+
+  private roleClasses: Record<string, string> = {
+    ADMIN: 'role-admin',
+    MANAGER: 'role-manager',
+    EMPLOYE: 'role-employe'
+  };
+
+  private roleIcons: Record<string, string> = {
+    ADMIN: '👑',
+    MANAGER: '📦',
+    EMPLOYE: '👤'
+  };
+
+  constructor(
+    public auth: Auth,
+    private router: Router,
+    public theme: ThemeService,
+    private elementRef: ElementRef
+  ) {}
+
+  get roleLabel(): string {
+    const role = this.auth.currentUser()?.role;
+    return role ? (this.roleLabels[role] || role) : '';
+  }
+
+  get roleClass(): string {
+    const role = this.auth.currentUser()?.role;
+    return role ? (this.roleClasses[role] || '') : '';
+  }
+
+  get roleIcon(): string {
+    const role = this.auth.currentUser()?.role;
+    return role ? (this.roleIcons[role] || '👤') : '👤';
+  }
+
+  get initials(): string {
+    const name = this.auth.currentUser()?.name || '';
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part[0]?.toUpperCase())
+      .join('');
+  }
+
+  toggleProfileMenu(): void {
+    this.profileMenuOpen.set(!this.profileMenuOpen());
+  }
+
+  closeProfileMenu(): void {
+    this.profileMenuOpen.set(false);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.profileMenuOpen()) return;
+    const target = event.target as HTMLElement;
+    const menuEl = this.elementRef.nativeElement.querySelector('.profile-menu');
+    if (menuEl && !menuEl.contains(target)) {
+      this.closeProfileMenu();
+    }
+  }
+
+  logout(): void {
+    this.closeProfileMenu();
+    this.auth.logout();
+    this.router.navigate(['/login']);
+  }
+}
+
+
+===== C:\Users\HP\albideynet-frontend\src\app\app.html =====
+@if (auth.isLoggedIn()) {
+  <nav class="navbar">
+    <div class="nav-left">
+      <a routerLink="/products" class="nav-brand">
+        <img src="/logo.png" alt="AlbideyNet" class="nav-logo">
+      </a>
+      <div class="nav-links">
+        <a routerLink="/home" routerLinkActive="active">Accueil</a>
+        <a routerLink="/products" routerLinkActive="active">Produits</a>
+        <a routerLink="/categories" routerLinkActive="active">Cat�gories</a>
+        <a routerLink="/suppliers" routerLinkActive="active">Fournisseurs</a>
+        <a routerLink="/stock-movements" routerLinkActive="active">Mouvements</a>
+        <a routerLink="/alerts" routerLinkActive="active">Alertes</a>
+      </div>
+    </div>
+    <div class="nav-user">
+      <label class="theme-toggle">
+        <input type="checkbox" [checked]="theme.isDark()" (change)="theme.toggle()">
+        <span class="toggle-track">
+          <span class="toggle-icon">??</span>
+          <span class="toggle-thumb"></span>
+          <span class="toggle-icon">??</span>
+        </span>
+      </label>
+
+      <div class="profile-menu">
+        <button class="profile-trigger" (click)="toggleProfileMenu()">
+          <span class="avatar">
+            {{ initials }}
+            <span class="status-dot"></span>
+          </span>
+          <span class="profile-name">{{ auth.currentUser()?.name }}</span>
+          <svg class="chevron" [class.open]="profileMenuOpen()" width="10" height="6" viewBox="0 0 10 6" fill="none">
+            <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        @if (profileMenuOpen()) {
+          <div class="profile-dropdown">
+            <div class="profile-dropdown-header">
+              <span class="avatar avatar-lg">
+                {{ initials }}
+                <span class="status-dot status-dot-lg"></span>
+              </span>
+              <div class="profile-dropdown-info">
+                <strong>{{ auth.currentUser()?.name }}</strong>
+                <small>{{ auth.currentUser()?.email }}</small>
+              </div>
+            </div>
+
+            <div class="profile-dropdown-role">
+              <span class="role-badge" [class]="roleClass">
+                <span class="role-icon">{{ roleIcon }}</span>
+                {{ roleLabel }}
+              </span>
+            </div>
+
+            <div class="profile-dropdown-divider"></div>
+
+            <a routerLink="/profile" class="menu-item" (click)="closeProfileMenu()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <span>Mon Profil</span>
+            </a>
+
+            <button class="menu-item menu-item-danger" (click)="logout()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+              <span>D�connexion</span>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </nav>
+}
+
+<main class="page-content">
+  <router-outlet></router-outlet>
+</main>
+
+
+
+===== C:\Users\HP\albideynet-frontend\src\app\app.css =====
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #1e3a5f;
+  padding: 12px 24px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+}
+
+.nav-logo {
+  height: 36px;
+  width: auto;
+  display: block;
+  border-radius: 4px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 24px;
+}
+
+.nav-links a {
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 4px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.nav-links a:hover {
+  color: white;
+}
+
+.nav-links a.active {
+  color: white;
+  border-bottom-color: #60a5fa;
+}
+
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #cbd5e1;
+  font-size: 14px;
+}
+
+.page-content {
+  padding: 24px 32px;
+  min-height: calc(100vh - 60px);
+  transition: background 0.3s ease;
+}
+
+/* Interrupteur clair / sombre */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.theme-toggle input {
+  display: none;
+}
+
+.toggle-track {
+  position: relative;
+  width: 54px;
+  height: 26px;
+  background: #0f172a;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px;
+}
+
+.toggle-icon {
+  font-size: 11px;
+  line-height: 1;
+  z-index: 1;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.25s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.theme-toggle input:checked ~ .toggle-track .toggle-thumb {
+  transform: translateX(28px);
+}
+
+/* ---- Menu profil ---- */
+.profile-menu {
+  position: relative;
+}
+
+.profile-trigger {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 999px;
+  padding: 5px 14px 5px 5px;
+  cursor: pointer;
+  color: #f1f5f9;
+  font-size: 14px;
+  transition: background 0.2s, border-color 0.2s;
+  max-width: 220px;
+}
+
+.profile-trigger:hover {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.24);
+}
+
+.avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.avatar-lg {
+  width: 46px;
+  height: 46px;
+  font-size: 16px;
+}
+
+.status-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 9px;
+  height: 9px;
+  background: #22c55e;
+  border-radius: 50%;
+  border: 2px solid #1e3a5f;
+}
+
+.status-dot-lg {
+  width: 12px;
+  height: 12px;
+  border: 2.5px solid white;
+}
+
+.profile-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 268px;
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+  padding: 18px;
+  z-index: 100;
+  animation: dropdownFade 0.16s ease;
+}
+
+@keyframes dropdownFade {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.profile-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-dropdown-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.profile-dropdown-info strong {
+  color: #1e293b;
+  font-size: 15px;
+}
+
+.profile-dropdown-info small {
+  color: #64748b;
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-dropdown-role {
+  margin-top: 14px;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.role-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.role-admin {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.role-manager {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.role-employe {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.profile-dropdown-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 16px 0 8px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 10px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  color: #334155;
+  transition: background 0.15s;
+}
+
+.menu-item:hover {
+  background: #f1f5f9;
+}
+
+.menu-item-danger {
+  color: #dc2626;
+}
+
+.menu-item-danger:hover {
+  background: #fef2f2;
+}
+
+/* Mode sombre : fond de la zone de contenu */
+:host-context(body.dark-theme) .page-content {
+  background: #0f172a;
+}
+
+:host-context(body.dark-theme) .profile-dropdown {
+  background: #1e293b;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.55);
+}
+
+:host-context(body.dark-theme) .profile-dropdown-info strong {
+  color: #f1f5f9;
+}
+
+:host-context(body.dark-theme) .profile-dropdown-info small {
+  color: #94a3b8;
+}
+
+:host-context(body.dark-theme) .profile-dropdown-divider {
+  background: #334155;
+}
+
+:host-context(body.dark-theme) .menu-item {
+  color: #e2e8f0;
+}
+
+:host-context(body.dark-theme) .menu-item:hover {
+  background: #334155;
+}
+
+:host-context(body.dark-theme) .menu-item-danger {
+  color: #f87171;
+}
+
+:host-context(body.dark-theme) .menu-item-danger:hover {
+  background: rgba(220, 38, 38, 0.15);
+}
+
+/* Impression */
+@media print {
+  .navbar,
+  .theme-toggle {
+    display: none !important;
+  }
+
+  .page-content {
+    padding: 0;
+  }
+}
+/* Lien "Mon Profil" dans le menu */
+a.menu-item {
+  color: #334155;
+  text-decoration: none;
+}
+
+a.menu-item:hover {
+  color: #334155;
+}
+
+:host-context(body.dark-theme) a.menu-item {
+  color: #e2e8f0;
+}
+
+
+
